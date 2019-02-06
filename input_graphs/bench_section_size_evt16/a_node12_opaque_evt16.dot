@@ -151,12 +151,12 @@ digraph GossipGraph {
     "B_20" -> "B_21" [minlen=1]
     "B_21" -> "B_22" [minlen=1]
     "B_22" -> "B_23" [minlen=3]
-    "B_23" -> "B_24" [minlen=5]
+    "B_23" -> "B_24" [minlen=4]
     "B_24" -> "B_25" [minlen=1]
     "B_25" -> "B_26" [minlen=1]
     "B_26" -> "B_27" [minlen=1]
     "B_27" -> "B_28" [minlen=1]
-    "B_28" -> "B_29" [minlen=3]
+    "B_28" -> "B_29" [minlen=4]
     "B_29" -> "B_30" [minlen=1]
     "B_30" -> "B_31" [minlen=1]
     "B_31" -> "B_32" [minlen=1]
@@ -358,7 +358,7 @@ digraph GossipGraph {
     "Dave" -> "D_0" [style=invis]
     "D_0" -> "D_1" [minlen=1]
     "D_1" -> "D_2" [minlen=3]
-    "D_2" -> "D_3" [minlen=4]
+    "D_2" -> "D_3" [minlen=3]
     "D_3" -> "D_4" [minlen=1]
     "D_4" -> "D_5" [minlen=1]
     "D_5" -> "D_6" [minlen=1]
@@ -378,7 +378,7 @@ digraph GossipGraph {
     "D_19" -> "D_20" [minlen=1]
     "D_20" -> "D_21" [minlen=2]
     "D_21" -> "D_22" [minlen=1]
-    "D_22" -> "D_23" [minlen=6]
+    "D_22" -> "D_23" [minlen=7]
     "D_23" -> "D_24" [minlen=1]
     "D_24" -> "D_25" [minlen=1]
     "D_25" -> "D_26" [minlen=2]
@@ -497,11 +497,11 @@ digraph GossipGraph {
     "E_18" -> "E_19" [minlen=1]
     "E_19" -> "E_20" [minlen=1]
     "E_20" -> "E_21" [minlen=1]
-    "E_21" -> "E_22" [minlen=2]
+    "E_21" -> "E_22" [minlen=1]
     "E_22" -> "E_23" [minlen=1]
     "E_23" -> "E_24" [minlen=1]
     "E_24" -> "E_25" [minlen=1]
-    "E_25" -> "E_26" [minlen=4]
+    "E_25" -> "E_26" [minlen=5]
     "E_26" -> "E_27" [minlen=3]
     "E_27" -> "E_28" [minlen=6]
     "E_28" -> "E_29" [minlen=1]
@@ -664,8 +664,8 @@ digraph GossipGraph {
   }
   "H_1" -> "F_2" [constraint=false]
   "C_2" -> "F_3" [constraint=false]
-  "G_3" -> "F_4" [constraint=false]
-  "J_3" -> "F_5" [constraint=false]
+  "J_3" -> "F_4" [constraint=false]
+  "G_3" -> "F_5" [constraint=false]
   "C_6" -> "F_11" [constraint=false]
   "C_23" -> "F_23" [constraint=false]
   "C_26" -> "F_24" [constraint=false]
@@ -733,9 +733,9 @@ digraph GossipGraph {
     "G_20" -> "G_21" [minlen=1]
     "G_21" -> "G_22" [minlen=1]
     "G_22" -> "G_23" [minlen=1]
-    "G_23" -> "G_24" [minlen=8]
+    "G_23" -> "G_24" [minlen=7]
     "G_24" -> "G_25" [minlen=1]
-    "G_25" -> "G_26" [minlen=3]
+    "G_25" -> "G_26" [minlen=4]
     "G_26" -> "G_27" [minlen=5]
     "G_27" -> "G_28" [minlen=12]
     "G_28" -> "G_29" [minlen=2]
@@ -808,7 +808,7 @@ digraph GossipGraph {
     "H_9" -> "H_10" [minlen=1]
     "H_10" -> "H_11" [minlen=1]
     "H_11" -> "H_12" [minlen=1]
-    "H_12" -> "H_13" [minlen=4]
+    "H_12" -> "H_13" [minlen=3]
     "H_13" -> "H_14" [minlen=1]
     "H_14" -> "H_15" [minlen=1]
     "H_15" -> "H_16" [minlen=1]
@@ -818,7 +818,7 @@ digraph GossipGraph {
     "H_19" -> "H_20" [minlen=2]
     "H_20" -> "H_21" [minlen=1]
     "H_21" -> "H_22" [minlen=2]
-    "H_22" -> "H_23" [minlen=2]
+    "H_22" -> "H_23" [minlen=3]
     "H_23" -> "H_24" [minlen=1]
     "H_24" -> "H_25" [minlen=1]
     "H_25" -> "H_26" [minlen=1]
@@ -928,9 +928,9 @@ digraph GossipGraph {
     "I_19" -> "I_20" [minlen=1]
     "I_20" -> "I_21" [minlen=1]
     "I_21" -> "I_22" [minlen=1]
-    "I_22" -> "I_23" [minlen=5]
+    "I_22" -> "I_23" [minlen=4]
     "I_23" -> "I_24" [minlen=1]
-    "I_24" -> "I_25" [minlen=3]
+    "I_24" -> "I_25" [minlen=4]
     "I_25" -> "I_26" [minlen=1]
     "I_26" -> "I_27" [minlen=2]
     "I_27" -> "I_28" [minlen=1]
@@ -1013,7 +1013,7 @@ digraph GossipGraph {
     "J_0" -> "J_1" [minlen=1]
     "J_1" -> "J_2" [minlen=1]
     "J_2" -> "J_3" [minlen=2]
-    "J_3" -> "J_4" [minlen=3]
+    "J_3" -> "J_4" [minlen=2]
     "J_4" -> "J_5" [minlen=1]
     "J_5" -> "J_6" [minlen=1]
     "J_6" -> "J_7" [minlen=1]
@@ -1032,7 +1032,7 @@ digraph GossipGraph {
     "J_19" -> "J_20" [minlen=1]
     "J_20" -> "J_21" [minlen=1]
     "J_21" -> "J_22" [minlen=1]
-    "J_22" -> "J_23" [minlen=3]
+    "J_22" -> "J_23" [minlen=4]
     "J_23" -> "J_24" [minlen=1]
     "J_24" -> "J_25" [minlen=1]
     "J_25" -> "J_26" [minlen=1]
@@ -1079,7 +1079,7 @@ digraph GossipGraph {
   }
   "G_1" -> "J_2" [constraint=false]
   "I_3" -> "J_3" [constraint=false]
-  "F_5" -> "J_4" [constraint=false]
+  "F_4" -> "J_4" [constraint=false]
   "D_3" -> "J_9" [constraint=false]
   "G_13" -> "J_15" [constraint=false]
   "L_11" -> "J_19" [constraint=false]
@@ -1250,7 +1250,7 @@ digraph GossipGraph {
     "L_7" -> "L_8" [minlen=1]
     "L_8" -> "L_9" [minlen=1]
     "L_9" -> "L_10" [minlen=1]
-    "L_10" -> "L_11" [minlen=4]
+    "L_10" -> "L_11" [minlen=3]
     "L_11" -> "L_12" [minlen=1]
     "L_12" -> "L_13" [minlen=1]
     "L_13" -> "L_14" [minlen=1]
@@ -1258,7 +1258,7 @@ digraph GossipGraph {
     "L_15" -> "L_16" [minlen=1]
     "L_16" -> "L_17" [minlen=1]
     "L_17" -> "L_18" [minlen=1]
-    "L_18" -> "L_19" [minlen=9]
+    "L_18" -> "L_19" [minlen=10]
     "L_19" -> "L_20" [minlen=3]
     "L_20" -> "L_21" [minlen=1]
     "L_21" -> "L_22" [minlen=1]
@@ -1467,20 +1467,20 @@ digraph GossipGraph {
 <tr><td colspan="6">A_18</td></tr>
 </table>>]
 /// cause: Request
-/// last_ancestors: {Alice: 18, Bob: 2, Carol: 4, Fred: 5, Gina: 16, Hank: 1, Iris: 3, Judy: 8}
+/// last_ancestors: {Alice: 18, Bob: 2, Carol: 4, Fred: 4, Gina: 16, Hank: 1, Iris: 3, Judy: 8}
 
   "A_19" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">A_19</td></tr>
 <tr><td colspan="6">OpaquePayload(10)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(10))
-/// last_ancestors: {Alice: 19, Bob: 2, Carol: 4, Fred: 5, Gina: 16, Hank: 1, Iris: 3, Judy: 8}
+/// last_ancestors: {Alice: 19, Bob: 2, Carol: 4, Fred: 4, Gina: 16, Hank: 1, Iris: 3, Judy: 8}
 
   "A_20" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">A_20</td></tr>
 </table>>]
 /// cause: Request
-/// last_ancestors: {Alice: 20, Bob: 12, Carol: 4, Dave: 1, Eric: 3, Fred: 5, Gina: 16, Hank: 2, Iris: 22, Judy: 8, Kent: 19}
+/// last_ancestors: {Alice: 20, Bob: 12, Carol: 4, Dave: 1, Eric: 3, Fred: 4, Gina: 16, Hank: 2, Iris: 22, Judy: 8, Kent: 19}
 
   "A_21" [style=filled, fillcolor=crimson, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">A_21</td></tr>
@@ -2303,28 +2303,28 @@ digraph GossipGraph {
 <tr><td colspan="6">B_19</td></tr>
 </table>>]
 /// cause: Request
-/// last_ancestors: {Alice: 1, Bob: 19, Carol: 4, Dave: 1, Fred: 5, Gina: 13, Hank: 1, Iris: 3, Judy: 8, Kent: 7}
+/// last_ancestors: {Alice: 1, Bob: 19, Carol: 4, Dave: 1, Fred: 4, Gina: 13, Hank: 1, Iris: 3, Judy: 8, Kent: 7}
 
   "B_20" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">B_20</td></tr>
 <tr><td colspan="6">OpaquePayload(13)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(13))
-/// last_ancestors: {Alice: 1, Bob: 20, Carol: 4, Dave: 1, Fred: 5, Gina: 13, Hank: 1, Iris: 3, Judy: 8, Kent: 7}
+/// last_ancestors: {Alice: 1, Bob: 20, Carol: 4, Dave: 1, Fred: 4, Gina: 13, Hank: 1, Iris: 3, Judy: 8, Kent: 7}
 
   "B_21" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">B_21</td></tr>
 <tr><td colspan="6">OpaquePayload(10)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(10))
-/// last_ancestors: {Alice: 1, Bob: 21, Carol: 4, Dave: 1, Fred: 5, Gina: 13, Hank: 1, Iris: 3, Judy: 8, Kent: 7}
+/// last_ancestors: {Alice: 1, Bob: 21, Carol: 4, Dave: 1, Fred: 4, Gina: 13, Hank: 1, Iris: 3, Judy: 8, Kent: 7}
 
   "B_22" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">B_22</td></tr>
 <tr><td colspan="6">OpaquePayload(11)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(11))
-/// last_ancestors: {Alice: 1, Bob: 22, Carol: 4, Dave: 1, Fred: 5, Gina: 13, Hank: 1, Iris: 3, Judy: 8, Kent: 7}
+/// last_ancestors: {Alice: 1, Bob: 22, Carol: 4, Dave: 1, Fred: 4, Gina: 13, Hank: 1, Iris: 3, Judy: 8, Kent: 7}
 
   "B_23" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">B_23</td></tr>
@@ -3825,131 +3825,131 @@ digraph GossipGraph {
 <tr><td colspan="6">D_3</td></tr>
 </table>>]
 /// cause: Request
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_4" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_4</td></tr>
 <tr><td colspan="6">OpaquePayload(10)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(10))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 4, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 4, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_5" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_5</td></tr>
 <tr><td colspan="6">OpaquePayload(7)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(7))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 5, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 5, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_6" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_6</td></tr>
 <tr><td colspan="6">OpaquePayload(2)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(2))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 6, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 6, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_7" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_7</td></tr>
 <tr><td colspan="6">OpaquePayload(5)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(5))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 7, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 7, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_8" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_8</td></tr>
 <tr><td colspan="6">OpaquePayload(13)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(13))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 8, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 8, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_9" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_9</td></tr>
 <tr><td colspan="6">OpaquePayload(3)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(3))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 9, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 9, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_10" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_10</td></tr>
 <tr><td colspan="6">OpaquePayload(6)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(6))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 10, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 10, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_11" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_11</td></tr>
 <tr><td colspan="6">OpaquePayload(9)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(9))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 11, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 11, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_12" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_12</td></tr>
 <tr><td colspan="6">OpaquePayload(14)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(14))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_13" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_13</td></tr>
 <tr><td colspan="6">OpaquePayload(15)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(15))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 13, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 13, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_14" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_14</td></tr>
 <tr><td colspan="6">OpaquePayload(1)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(1))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 14, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 14, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_15" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_15</td></tr>
 <tr><td colspan="6">OpaquePayload(4)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(4))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 15, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 15, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_16" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_16</td></tr>
 <tr><td colspan="6">OpaquePayload(0)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(0))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 16, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 16, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_17" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_17</td></tr>
 <tr><td colspan="6">OpaquePayload(11)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(11))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 17, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 17, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_18" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_18</td></tr>
 <tr><td colspan="6">OpaquePayload(12)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(12))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 18, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 18, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_19" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_19</td></tr>
 <tr><td colspan="6">OpaquePayload(8)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(8))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 19, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 19, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "D_20" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_20</td></tr>
 </table>>]
 /// cause: Response
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 20, Eric: 3, Fred: 5, Gina: 3, Hank: 13, Iris: 4, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 20, Eric: 3, Fred: 4, Gina: 1, Hank: 13, Iris: 4, Judy: 4}
 
   "D_21" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_21</td></tr>
 </table>>]
 /// cause: Response
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 21, Eric: 3, Fred: 5, Gina: 3, Hank: 20, Iris: 4, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 21, Eric: 3, Fred: 4, Gina: 1, Hank: 20, Iris: 4, Judy: 4}
 
   "D_22" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">D_22</td></tr>
@@ -5676,13 +5676,13 @@ digraph GossipGraph {
   "F_4" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">F_4</td></tr>
 </table>>]
-/// cause: Response
-/// last_ancestors: {Carol: 2, Fred: 4, Gina: 3, Hank: 1, Iris: 2, Judy: 2}
+/// cause: Request
+/// last_ancestors: {Carol: 2, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 3}
 
   "F_5" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">F_5</td></tr>
 </table>>]
-/// cause: Request
+/// cause: Response
 /// last_ancestors: {Carol: 2, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 3}
 
   "F_6" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
@@ -6475,75 +6475,75 @@ digraph GossipGraph {
 <tr><td colspan="6">G_13</td></tr>
 </table>>]
 /// cause: Request
-/// last_ancestors: {Carol: 4, Fred: 5, Gina: 13, Hank: 1, Iris: 3, Judy: 8}
+/// last_ancestors: {Carol: 4, Fred: 4, Gina: 13, Hank: 1, Iris: 3, Judy: 8}
 
   "G_14" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">G_14</td></tr>
 <tr><td colspan="6">OpaquePayload(1)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(1))
-/// last_ancestors: {Carol: 4, Fred: 5, Gina: 14, Hank: 1, Iris: 3, Judy: 8}
+/// last_ancestors: {Carol: 4, Fred: 4, Gina: 14, Hank: 1, Iris: 3, Judy: 8}
 
   "G_15" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">G_15</td></tr>
 <tr><td colspan="6">OpaquePayload(4)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(4))
-/// last_ancestors: {Carol: 4, Fred: 5, Gina: 15, Hank: 1, Iris: 3, Judy: 8}
+/// last_ancestors: {Carol: 4, Fred: 4, Gina: 15, Hank: 1, Iris: 3, Judy: 8}
 
   "G_16" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">G_16</td></tr>
 <tr><td colspan="6">OpaquePayload(0)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(0))
-/// last_ancestors: {Carol: 4, Fred: 5, Gina: 16, Hank: 1, Iris: 3, Judy: 8}
+/// last_ancestors: {Carol: 4, Fred: 4, Gina: 16, Hank: 1, Iris: 3, Judy: 8}
 
   "G_17" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">G_17</td></tr>
 <tr><td colspan="6">OpaquePayload(3)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(3))
-/// last_ancestors: {Carol: 4, Fred: 5, Gina: 17, Hank: 1, Iris: 3, Judy: 8}
+/// last_ancestors: {Carol: 4, Fred: 4, Gina: 17, Hank: 1, Iris: 3, Judy: 8}
 
   "G_18" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">G_18</td></tr>
 <tr><td colspan="6">OpaquePayload(9)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(9))
-/// last_ancestors: {Carol: 4, Fred: 5, Gina: 18, Hank: 1, Iris: 3, Judy: 8}
+/// last_ancestors: {Carol: 4, Fred: 4, Gina: 18, Hank: 1, Iris: 3, Judy: 8}
 
   "G_19" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">G_19</td></tr>
 <tr><td colspan="6">OpaquePayload(12)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(12))
-/// last_ancestors: {Carol: 4, Fred: 5, Gina: 19, Hank: 1, Iris: 3, Judy: 8}
+/// last_ancestors: {Carol: 4, Fred: 4, Gina: 19, Hank: 1, Iris: 3, Judy: 8}
 
   "G_20" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">G_20</td></tr>
 <tr><td colspan="6">OpaquePayload(2)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(2))
-/// last_ancestors: {Carol: 4, Fred: 5, Gina: 20, Hank: 1, Iris: 3, Judy: 8}
+/// last_ancestors: {Carol: 4, Fred: 4, Gina: 20, Hank: 1, Iris: 3, Judy: 8}
 
   "G_21" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">G_21</td></tr>
 <tr><td colspan="6">OpaquePayload(11)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(11))
-/// last_ancestors: {Carol: 4, Fred: 5, Gina: 21, Hank: 1, Iris: 3, Judy: 8}
+/// last_ancestors: {Carol: 4, Fred: 4, Gina: 21, Hank: 1, Iris: 3, Judy: 8}
 
   "G_22" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">G_22</td></tr>
 </table>>]
 /// cause: Response
-/// last_ancestors: {Alice: 1, Bob: 19, Carol: 4, Dave: 1, Fred: 5, Gina: 22, Hank: 1, Iris: 3, Judy: 8, Kent: 7}
+/// last_ancestors: {Alice: 1, Bob: 19, Carol: 4, Dave: 1, Fred: 4, Gina: 22, Hank: 1, Iris: 3, Judy: 8, Kent: 7}
 
   "G_23" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">G_23</td></tr>
 </table>>]
 /// cause: Response
-/// last_ancestors: {Alice: 18, Bob: 19, Carol: 4, Dave: 1, Fred: 5, Gina: 23, Hank: 1, Iris: 3, Judy: 8, Kent: 7}
+/// last_ancestors: {Alice: 18, Bob: 19, Carol: 4, Dave: 1, Fred: 4, Gina: 23, Hank: 1, Iris: 3, Judy: 8, Kent: 7}
 
   "G_24" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">G_24</td></tr>
@@ -7086,68 +7086,68 @@ digraph GossipGraph {
 <tr><td colspan="6">H_13</td></tr>
 </table>>]
 /// cause: Request
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Eric: 3, Fred: 5, Gina: 3, Hank: 13, Iris: 4, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Eric: 3, Fred: 4, Gina: 1, Hank: 13, Iris: 4, Judy: 4}
 
   "H_14" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">H_14</td></tr>
 <tr><td colspan="6">OpaquePayload(13)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(13))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Eric: 3, Fred: 5, Gina: 3, Hank: 14, Iris: 4, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Eric: 3, Fred: 4, Gina: 1, Hank: 14, Iris: 4, Judy: 4}
 
   "H_15" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">H_15</td></tr>
 <tr><td colspan="6">OpaquePayload(5)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(5))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Eric: 3, Fred: 5, Gina: 3, Hank: 15, Iris: 4, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Eric: 3, Fred: 4, Gina: 1, Hank: 15, Iris: 4, Judy: 4}
 
   "H_16" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">H_16</td></tr>
 <tr><td colspan="6">OpaquePayload(8)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(8))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Eric: 3, Fred: 5, Gina: 3, Hank: 16, Iris: 4, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Eric: 3, Fred: 4, Gina: 1, Hank: 16, Iris: 4, Judy: 4}
 
   "H_17" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">H_17</td></tr>
 <tr><td colspan="6">OpaquePayload(12)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(12))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Eric: 3, Fred: 5, Gina: 3, Hank: 17, Iris: 4, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Eric: 3, Fred: 4, Gina: 1, Hank: 17, Iris: 4, Judy: 4}
 
   "H_18" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">H_18</td></tr>
 <tr><td colspan="6">OpaquePayload(0)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(0))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Eric: 3, Fred: 5, Gina: 3, Hank: 18, Iris: 4, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Eric: 3, Fred: 4, Gina: 1, Hank: 18, Iris: 4, Judy: 4}
 
   "H_19" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">H_19</td></tr>
 <tr><td colspan="6">OpaquePayload(3)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(3))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Eric: 3, Fred: 5, Gina: 3, Hank: 19, Iris: 4, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 12, Eric: 3, Fred: 4, Gina: 1, Hank: 19, Iris: 4, Judy: 4}
 
   "H_20" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">H_20</td></tr>
 </table>>]
 /// cause: Request
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 20, Eric: 3, Fred: 5, Gina: 3, Hank: 20, Iris: 4, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 20, Eric: 3, Fred: 4, Gina: 1, Hank: 20, Iris: 4, Judy: 4}
 
   "H_21" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">H_21</td></tr>
 <tr><td colspan="6">OpaquePayload(2)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(2))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 20, Eric: 3, Fred: 5, Gina: 3, Hank: 21, Iris: 4, Judy: 4}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 20, Eric: 3, Fred: 4, Gina: 1, Hank: 21, Iris: 4, Judy: 4}
 
   "H_22" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">H_22</td></tr>
 </table>>]
 /// cause: Response
-/// last_ancestors: {Alice: 1, Bob: 12, Carol: 2, Dave: 20, Eric: 3, Fred: 5, Gina: 3, Hank: 22, Iris: 23, Judy: 4, Kent: 19}
+/// last_ancestors: {Alice: 1, Bob: 12, Carol: 2, Dave: 20, Eric: 3, Fred: 4, Gina: 1, Hank: 22, Iris: 23, Judy: 4, Kent: 19}
 
   "H_23" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">H_23</td></tr>
@@ -7973,13 +7973,13 @@ digraph GossipGraph {
 <tr><td colspan="6">I_23</td></tr>
 </table>>]
 /// cause: Request
-/// last_ancestors: {Alice: 1, Bob: 12, Carol: 2, Dave: 20, Eric: 3, Fred: 5, Gina: 3, Hank: 21, Iris: 23, Judy: 4, Kent: 19}
+/// last_ancestors: {Alice: 1, Bob: 12, Carol: 2, Dave: 20, Eric: 3, Fred: 4, Gina: 1, Hank: 21, Iris: 23, Judy: 4, Kent: 19}
 
   "I_24" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">I_24</td></tr>
 </table>>]
 /// cause: Response
-/// last_ancestors: {Alice: 20, Bob: 12, Carol: 4, Dave: 20, Eric: 3, Fred: 5, Gina: 16, Hank: 21, Iris: 24, Judy: 8, Kent: 19}
+/// last_ancestors: {Alice: 20, Bob: 12, Carol: 4, Dave: 20, Eric: 3, Fred: 4, Gina: 16, Hank: 21, Iris: 24, Judy: 8, Kent: 19}
 
   "I_25" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">I_25</td></tr>
@@ -8626,130 +8626,130 @@ digraph GossipGraph {
 <tr><td colspan="6">J_4</td></tr>
 </table>>]
 /// cause: Response
-/// last_ancestors: {Carol: 2, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 4}
+/// last_ancestors: {Carol: 2, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 4}
 
   "J_5" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_5</td></tr>
 <tr><td colspan="6">OpaquePayload(12)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(12))
-/// last_ancestors: {Carol: 2, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 5}
+/// last_ancestors: {Carol: 2, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 5}
 
   "J_6" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_6</td></tr>
 <tr><td colspan="6">OpaquePayload(1)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(1))
-/// last_ancestors: {Carol: 2, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 6}
+/// last_ancestors: {Carol: 2, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 6}
 
   "J_7" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_7</td></tr>
 <tr><td colspan="6">OpaquePayload(2)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(2))
-/// last_ancestors: {Carol: 2, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 7}
+/// last_ancestors: {Carol: 2, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 7}
 
   "J_8" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_8</td></tr>
 <tr><td colspan="6">OpaquePayload(5)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(5))
-/// last_ancestors: {Carol: 2, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 8}
+/// last_ancestors: {Carol: 2, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 8}
 
   "J_9" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_9</td></tr>
 </table>>]
 /// cause: Response
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 9}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 9}
 
   "J_10" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_10</td></tr>
 <tr><td colspan="6">OpaquePayload(9)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(9))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 10}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 10}
 
   "J_11" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_11</td></tr>
 <tr><td colspan="6">OpaquePayload(4)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(4))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 11}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 11}
 
   "J_12" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_12</td></tr>
 <tr><td colspan="6">OpaquePayload(0)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(0))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 12}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 12}
 
   "J_13" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_13</td></tr>
 <tr><td colspan="6">OpaquePayload(10)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(10))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 13}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 13}
 
   "J_14" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_14</td></tr>
 <tr><td colspan="6">OpaquePayload(11)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(11))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 14}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 14}
 
   "J_15" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_15</td></tr>
 </table>>]
 /// cause: Response
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 5, Gina: 13, Hank: 1, Iris: 3, Judy: 15}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 4, Gina: 13, Hank: 1, Iris: 3, Judy: 15}
 
   "J_16" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_16</td></tr>
 <tr><td colspan="6">OpaquePayload(3)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(3))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 5, Gina: 13, Hank: 1, Iris: 3, Judy: 16}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 4, Gina: 13, Hank: 1, Iris: 3, Judy: 16}
 
   "J_17" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_17</td></tr>
 <tr><td colspan="6">OpaquePayload(7)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(7))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 5, Gina: 13, Hank: 1, Iris: 3, Judy: 17}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 4, Gina: 13, Hank: 1, Iris: 3, Judy: 17}
 
   "J_18" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_18</td></tr>
 <tr><td colspan="6">OpaquePayload(13)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(13))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 5, Gina: 13, Hank: 1, Iris: 3, Judy: 18}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 4, Gina: 13, Hank: 1, Iris: 3, Judy: 18}
 
   "J_19" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_19</td></tr>
 </table>>]
 /// cause: Response
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 5, Gina: 13, Hank: 1, Iris: 3, Judy: 19, Lucy: 11}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 4, Gina: 13, Hank: 1, Iris: 3, Judy: 19, Lucy: 11}
 
   "J_20" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_20</td></tr>
 <tr><td colspan="6">OpaquePayload(6)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(6))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 5, Gina: 13, Hank: 1, Iris: 3, Judy: 20, Lucy: 11}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 4, Gina: 13, Hank: 1, Iris: 3, Judy: 20, Lucy: 11}
 
   "J_21" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_21</td></tr>
 <tr><td colspan="6">OpaquePayload(8)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(8))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 5, Gina: 13, Hank: 1, Iris: 3, Judy: 21, Lucy: 11}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 4, Gina: 13, Hank: 1, Iris: 3, Judy: 21, Lucy: 11}
 
   "J_22" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_22</td></tr>
 <tr><td colspan="6">OpaquePayload(14)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(14))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 5, Gina: 13, Hank: 1, Iris: 3, Judy: 22, Lucy: 11}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 4, Dave: 3, Fred: 4, Gina: 13, Hank: 1, Iris: 3, Judy: 22, Lucy: 11}
 
   "J_23" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">J_23</td></tr>
@@ -10406,56 +10406,56 @@ digraph GossipGraph {
 <tr><td colspan="6">L_11</td></tr>
 </table>>]
 /// cause: Request
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 10, Lucy: 11}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 10, Lucy: 11}
 
   "L_12" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">L_12</td></tr>
 <tr><td colspan="6">OpaquePayload(14)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(14))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 10, Lucy: 12}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 10, Lucy: 12}
 
   "L_13" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">L_13</td></tr>
 <tr><td colspan="6">OpaquePayload(15)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(15))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 10, Lucy: 13}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 10, Lucy: 13}
 
   "L_14" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">L_14</td></tr>
 <tr><td colspan="6">OpaquePayload(10)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(10))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 10, Lucy: 14}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 10, Lucy: 14}
 
   "L_15" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">L_15</td></tr>
 <tr><td colspan="6">OpaquePayload(12)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(12))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 10, Lucy: 15}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 10, Lucy: 15}
 
   "L_16" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">L_16</td></tr>
 <tr><td colspan="6">OpaquePayload(2)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(2))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 10, Lucy: 16}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 10, Lucy: 16}
 
   "L_17" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">L_17</td></tr>
 <tr><td colspan="6">OpaquePayload(5)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(5))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 10, Lucy: 17}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 10, Lucy: 17}
 
   "L_18" [style=filled, fillcolor=cyan, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">L_18</td></tr>
 <tr><td colspan="6">OpaquePayload(3)</td></tr>
 </table>>]
 /// cause: Observation(OpaquePayload(3))
-/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 5, Gina: 3, Hank: 1, Iris: 3, Judy: 10, Lucy: 18}
+/// last_ancestors: {Alice: 1, Bob: 3, Carol: 2, Dave: 3, Fred: 4, Gina: 1, Hank: 1, Iris: 3, Judy: 10, Lucy: 18}
 
   "L_19" [fillcolor=white, shape=rectangle, label=<<table border="0" cellborder="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="6">L_19</td></tr>
