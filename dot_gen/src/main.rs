@@ -197,6 +197,7 @@ fn main() {
                 },
             )
         })
+        .seed([1, 2, 3, 4])
         .file("Alice", "minimal.dot");
 
     let _ = scenarios
@@ -210,6 +211,7 @@ fn main() {
                 },
             )
         })
+        .seed([1, 2, 3, 4])
         .file("Alice", "static.dot");
 
     let _ = scenarios
@@ -224,6 +226,7 @@ fn main() {
                 },
             )
         })
+        .seed([1, 2, 3, 4])
         .file("Alice", "dynamic.dot");
 
     let add_bench_scalability = |s: &mut Scenarios, opaque_to_add: usize, genesis_size: usize| {
