@@ -30,8 +30,6 @@ use std::cmp;
 #[cfg(any(test, feature = "testing"))]
 use std::collections::BTreeMap;
 use std::fmt::{self, Debug, Display, Formatter};
-#[cfg(feature = "dump-graphs")]
-use std::io::{self, Write};
 
 /// Provide a small interface to Event not dependent on PublicId. Serves as a test seam.
 pub(crate) trait AbstractEvent {
@@ -372,7 +370,7 @@ impl<P: PublicId> Event<P> {
     }
 
     /// Returns the first char of the creator's ID, followed by an underscore and the event's index.
-    #[cfg(any(test, feature = "testing", feature = "dump-graphs"))]
+    #[cfg(any(test, feature = "testing"))]
     pub fn short_name(&self) -> ShortName {
         ShortName {
             creator_initial: self.cache.creator_initial,
@@ -381,16 +379,8 @@ impl<P: PublicId> Event<P> {
     }
 
     #[cfg(feature = "dump-graphs")]
-    pub fn write_cause_to_dot_format<T: NetworkEvent>(
-        &self,
-        writer: &mut Write,
-        observations: &ObservationStore<T, P>,
-    ) -> io::Result<()> {
-        writeln!(
-            writer,
-            "/// cause: {}",
-            self.content.cause.display(observations)
-        )
+    pub fn cause(&self) -> &Cause<VoteKey<P>, EventIndex> {
+        &self.content.cause
     }
 }
 
@@ -428,7 +418,7 @@ impl<P: PublicId> Debug for Event<P> {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         write!(formatter, "Event{{")?;
 
-        #[cfg(any(test, feature = "testing", feature = "dump-graphs"))]
+        #[cfg(any(test, feature = "testing"))]
         write!(formatter, " {}", self.short_name())?;
 
         write!(formatter, " {:?}", self.hash())?;
@@ -559,7 +549,7 @@ struct Cache {
     // Peers with a fork having both sides seen by this event.
     forking_peers: PeerIndexSet,
     // First leter of the creator name.
-    #[cfg(any(test, feature = "testing", feature = "dump-graphs"))]
+    #[cfg(any(test, feature = "testing"))]
     creator_initial: char,
 }
 
@@ -591,7 +581,7 @@ impl Cache {
             index_by_creator,
             last_ancestors,
             forking_peers,
-            #[cfg(any(test, feature = "testing", feature = "dump-graphs"))]
+            #[cfg(any(test, feature = "testing"))]
             creator_initial: get_creator_initial(peer_list, content.creator),
         }
     }
@@ -692,7 +682,7 @@ where
         .find(|event| event.short_name().to_string() == short_name)
 }
 
-#[cfg(any(test, feature = "testing", feature = "dump-graphs"))]
+#[cfg(any(test, feature = "testing"))]
 fn get_creator_initial<S: SecretId>(peer_list: &PeerList<S>, creator: PeerIndex) -> char {
     peer_list
         .get(creator)

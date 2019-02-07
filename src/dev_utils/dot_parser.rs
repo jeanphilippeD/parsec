@@ -148,14 +148,20 @@ struct ParsedEvent {
 const SKIP_DIGRAPH_INITIAL_PROPS: usize = 4;
 const SKIP_STYLE_INVIS: usize = 3;
 
+static B1: &[u8] = b"}1";
+static B2: &[u8] = b"}2";
+static B3: &[u8] = b"}3";
+static B4: &[u8] = b"}4";
+static B5: &[u8] = b"}5";
+
 fn parse_graph() -> Parser<u8, ParsedGraph> {
     let subgraphs = seq(b"digraph GossipGraph")
         * next_line().repeat(SKIP_DIGRAPH_INITIAL_PROPS)
         * parse_subgraph().repeat(1..)
-        - (none_of(b"}").repeat(0..) * one_of(b"}"))
+        - (none_of(&B1[0..1]).repeat(0..) * one_of(&B2[0..1]))
         - next_line().repeat(SKIP_STYLE_INVIS)
         + parse_event_details()
-        - seq(b"}")
+        - seq(&B3[0..1])
         - next_line().repeat(2);
     subgraphs.map(|(graphs, details)| {
         let mut graph = BTreeMap::new();
@@ -394,7 +400,7 @@ fn parse_round_hashes() -> Parser<u8, BTreeMap<PeerId, Vec<RoundHash>>> {
         * next_line()
         * parse_round_hashes_for_peer().repeat(0..)
         - comment_prefix()
-        - seq(b"}")
+        - seq(&B4[0..1])
         - next_line())
     .map(|v| v.into_iter().collect())
 }
@@ -457,7 +463,7 @@ fn parse_unconsensused_events() -> Parser<u8, BTreeSet<String>> {
     let line = comment_prefix()
         * seq(b"unconsensused_events: {")
         * list(sym(b'"') * parse_event_id() - sym(b'"'), seq(b", "))
-        - seq(b"}")
+        - seq(&B5[0..1])
         - next_line();
     line.opt()
         .map(|ids| ids.into_iter().flat_map(|ids| ids).collect())
@@ -714,7 +720,8 @@ impl ParsedContents {
 
 /// Read a dumped dot file and return with parsed event graph and associated info.
 pub(crate) fn parse_dot_file<P: AsRef<Path>>(full_path: P) -> io::Result<ParsedContents> {
-    let result = unwrap!(read(File::open(full_path)?));
+    let name: Option<String> = full_path.as_ref().to_str().map(|s| s.to_string());
+    let result = unwrap!(read(File::open(full_path)?), "read: {:?}", name);
     Ok(convert_into_parsed_contents(result))
 }
 
@@ -976,7 +983,7 @@ mod tests {
     type Snapshot = (GraphSnapshot, MetaElectionSnapshot<PeerId>);
 
     // Alter the seed here to reproduce failures
-    static SEED: RngChoice = RngChoice::SeededRandom;
+    static SEED: RngChoice = RngChoice::Seeded([1, 2, 3, 4]);
 
     #[test]
     fn dot_parser() {

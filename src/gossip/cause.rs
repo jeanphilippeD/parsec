@@ -22,20 +22,18 @@ use crate::network_event::NetworkEvent;
 use crate::observation::ConsensusMode;
 use crate::observation::ObservationForStore;
 use crate::observation::ObservationInfo;
-#[cfg(any(test, feature = "dump-graphs", feature = "testing"))]
+#[cfg(any(test, feature = "testing"))]
 use crate::observation::ObservationStore;
 use crate::peer_list::PeerIndex;
 use crate::vote::{Vote, VoteKey};
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "dump-graphs")]
-use std::fmt::{self, Display, Formatter};
 
 #[serde(bound(
     serialize = "V: Serialize, E: Serialize",
     deserialize = "V: Deserialize<'de>, E: Deserialize<'de>"
 ))]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
-pub(super) enum Cause<V, E> {
+pub(crate) enum Cause<V, E> {
     // Identifiers of the latest `Event`s of own and the peer which sent the request.
     Request { self_parent: E, other_parent: E },
     // Identifiers of the latest `Event`s of own and the peer which sent the response.
@@ -123,19 +121,6 @@ impl<P: PublicId> Cause<VoteKey<P>, EventIndex> {
         };
         Ok(cause)
     }
-
-    /// Returns an object that implements Display for printing the payload instead of just the
-    /// payload key.
-    #[cfg(feature = "dump-graphs")]
-    pub(crate) fn display<'a, 'b, T: NetworkEvent>(
-        &'a self,
-        observations: &'b ObservationStore<T, P>,
-    ) -> CauseDisplay<'a, 'b, T, P> {
-        CauseDisplay {
-            cause: self,
-            observations,
-        }
-    }
 }
 
 #[cfg(any(test, feature = "testing"))]
@@ -203,34 +188,6 @@ impl Cause<VoteKey<PeerId>, EventIndex> {
                     self_parent,
                 }
             }
-        }
-    }
-}
-
-#[cfg(feature = "dump-graphs")]
-pub(crate) struct CauseDisplay<'a, 'b, T: NetworkEvent, P: PublicId> {
-    cause: &'a Cause<VoteKey<P>, EventIndex>,
-    observations: &'b ObservationStore<T, P>,
-}
-
-#[cfg(feature = "dump-graphs")]
-impl<'a, 'b, T: NetworkEvent, P: PublicId> Display for CauseDisplay<'a, 'b, T, P> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match self.cause {
-            Cause::Request { .. } => write!(f, "Request"),
-            Cause::Response { .. } => write!(f, "Response"),
-            Cause::Observation { ref vote, .. } => {
-                if let Some(observation) = self
-                    .observations
-                    .get(vote.payload_key())
-                    .map(|info| &info.observation)
-                {
-                    write!(f, "Observation({:?})", observation)
-                } else {
-                    write!(f, "Observation(?)")
-                }
-            }
-            Cause::Initial => write!(f, "Initial"),
         }
     }
 }

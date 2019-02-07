@@ -59,19 +59,21 @@ pub use self::detail::DIR;
 
 #[cfg(feature = "dump-graphs")]
 mod detail {
-    use crate::gossip::{Event, EventHash, EventIndex, Graph, GraphSnapshot, IndexedEventRef};
+    use crate::gossip::{
+        Cause, Event, EventHash, EventIndex, Graph, GraphSnapshot, IndexedEventRef,
+    };
     use crate::id::{PublicId, SecretId};
     use crate::meta_voting::{MetaElection, MetaElectionSnapshot, MetaEvent, MetaVote};
     use crate::network_event::NetworkEvent;
-    use crate::observation::ObservationStore;
+    use crate::observation::{Observation, ObservationKey, ObservationStore};
     use crate::peer_list::{PeerIndex, PeerIndexMap, PeerIndexSet, PeerList};
     use crate::serialise;
     use rand::{self, Rng};
     use std::cell::RefCell;
-    use std::cmp;
+    use std::cmp::{self, min};
     use std::collections::{BTreeMap, BTreeSet};
     use std::env;
-    use std::fmt::{self, Debug};
+    use std::fmt::{self, Debug, Formatter};
     use std::fs::{self, File};
     use std::io::{self, BufWriter, Write};
     use std::path::{Path, PathBuf};
@@ -156,7 +158,7 @@ mod detail {
         peer_list: &PeerList<S>,
         observations: &ObservationStore<T, S::PublicId>,
     ) {
-        let id = format!("{:?}", owner_id);
+        let id = sanitize_peer_id(owner_id).value;
 
         if let Some(ref filter_peers) = *FILTER_PEERS {
             if !filter_peers.contains(&id) {
@@ -173,12 +175,20 @@ mod detail {
         let file_path = DIR.with(|dir| dir.join(format!("{}-{:03}.dot", id, call_count)));
         catch_dump(file_path.clone(), gossip_graph, peer_list, meta_election);
 
+        let peer_ids = sanitize_peer_ids(peer_list);
+        let short_peer_ids = short_peer_id_names(&peer_ids);
+
         match DotWriter::new(
             &file_path,
             gossip_graph,
             meta_election,
             peer_list,
-            observations,
+            &observations
+                .iter()
+                .map(|(key, info)| (*key, DotObservation::new(&key, &info.observation)))
+                .collect(),
+            &peer_ids,
+            &short_peer_ids,
         ) {
             Ok(mut dot_writer) => {
                 if let Err(error) = dot_writer.write() {
@@ -320,16 +330,18 @@ mod detail {
         lines
     }
 
-    struct DotWriter<'a, T: NetworkEvent + 'a, S: SecretId + 'a> {
+    struct DotWriter<'a, S: SecretId + 'a> {
         file: BufWriter<File>,
         gossip_graph: &'a Graph<S::PublicId>,
         meta_election: &'a MetaElection,
         peer_list: &'a PeerList<S>,
-        observations: &'a ObservationStore<T, S::PublicId>,
+        observations: &'a DotObservationStore,
+        peer_ids: &'a PeerIndexMap<DotPeerId>,
+        short_peer_ids: &'a PeerIndexMap<DotPeerId>,
         indent: usize,
     }
 
-    impl<'a, T: NetworkEvent + 'a, S: SecretId + 'a> DotWriter<'a, T, S> {
+    impl<'a, S: SecretId + 'a> DotWriter<'a, S> {
         const COMMENT: &'static str = "/// ";
 
         fn new(
@@ -337,7 +349,9 @@ mod detail {
             gossip_graph: &'a Graph<S::PublicId>,
             meta_election: &'a MetaElection,
             peer_list: &'a PeerList<S>,
-            observations: &'a ObservationStore<T, S::PublicId>,
+            observations: &'a DotObservationStore,
+            peer_ids: &'a PeerIndexMap<DotPeerId>,
+            short_peer_ids: &'a PeerIndexMap<DotPeerId>,
         ) -> io::Result<Self> {
             File::create(&file_path).map(|file| DotWriter {
                 file: BufWriter::new(file),
@@ -345,6 +359,8 @@ mod detail {
                 meta_election,
                 peer_list,
                 observations,
+                peer_ids,
+                short_peer_ids,
                 indent: 0,
             })
         }
@@ -361,10 +377,29 @@ mod detail {
             self.indent -= 2;
         }
 
+        fn index_to_peer_id(&self, index: PeerIndex) -> DotPeerId {
+            self.peer_ids
+                .get(index)
+                .cloned()
+                .unwrap_or_else(|| DotPeerId {
+                    value: "???".to_string(),
+                })
+        }
+
         fn index_to_short_name(&self, index: EventIndex) -> Option<String> {
             self.gossip_graph
                 .get(index)
-                .map(|event| event.short_name().to_string())
+                .map(|event| self.event_to_short_name(&event))
+        }
+
+        fn event_to_short_name(&self, event: &Event<S::PublicId>) -> String {
+            let peer_short_name: &str = self
+                .short_peer_ids
+                .get(event.creator())
+                .map(|id| id.value.as_str())
+                .unwrap_or("???");
+
+            format!("{}_{}", peer_short_name, event.index_by_creator())
         }
 
         fn writeln(&mut self, args: fmt::Arguments) -> io::Result<()> {
@@ -379,7 +414,12 @@ mod detail {
             self.writeln(format_args!("  rankdir=BT\n"))?;
 
             let positions = self.calculate_positions();
-            for (peer_index, peer_id) in self.peer_list.all_ids() {
+            let peer_ids = self.peer_ids;
+            for (peer_index, peer_id) in self
+                .peer_list
+                .iter()
+                .filter_map(|(index, _)| peer_ids.get(index).map(|id| (index, id)))
+            {
                 self.write_subgraph(peer_index, peer_id, &positions)?;
                 self.write_other_parents(peer_index)?;
             }
@@ -403,17 +443,17 @@ mod detail {
                 "{}{}our_id: {:?}",
                 Self::COMMENT,
                 indent,
-                self.peer_list.our_id().public_id()
+                sanitize_peer_id(self.peer_list.our_id().public_id())
             ))?;
             self.writeln(format_args!("{}{}peer_list: {{", Self::COMMENT, indent,))?;
             self.indent();
             let indent = self.indentation();
-            for (_, peer) in self.peer_list.iter() {
+            for (index, peer) in self.peer_list.iter() {
                 self.writeln(format_args!(
                     "{}{}{:?}: {:?}",
                     Self::COMMENT,
                     indent,
-                    peer.id(),
+                    self.index_to_peer_id(index),
                     peer.state(),
                 ))?;
             }
@@ -459,7 +499,7 @@ mod detail {
         fn write_subgraph(
             &mut self,
             peer_index: PeerIndex,
-            peer_id: &S::PublicId,
+            peer_id: &DotPeerId,
             positions: &BTreeMap<EventHash, usize>,
         ) -> io::Result<()> {
             self.writeln(format_args!("  style=invis"))?;
@@ -473,7 +513,7 @@ mod detail {
         fn write_self_parents(
             &mut self,
             peer_index: PeerIndex,
-            peer_id: &S::PublicId,
+            peer_id: &DotPeerId,
             positions: &BTreeMap<EventHash, usize>,
         ) -> io::Result<()> {
             let mut lines = vec![];
@@ -508,7 +548,7 @@ mod detail {
                 lines.push(format!(
                     "    {} -> \"{}\" {}",
                     before_arrow,
-                    event.short_name(),
+                    self.event_to_short_name(&event),
                     suffix
                 ));
             }
@@ -531,8 +571,8 @@ mod detail {
                 {
                     lines.push(format!(
                         "  \"{}\" -> \"{}\" [constraint=false]",
-                        other_parent.short_name(),
-                        event.short_name()
+                        self.event_to_short_name(&other_parent),
+                        self.event_to_short_name(&event)
                     ));
                 }
             }
@@ -545,8 +585,8 @@ mod detail {
             self.writeln(format_args!("    rank=same"))?;
             let mut peer_ids = self
                 .peer_list
-                .all_ids()
-                .map(|(_, id)| id)
+                .iter()
+                .filter_map(|(index, _)| self.peer_ids.get(index))
                 .collect::<Vec<_>>();
             for peer_id in &peer_ids {
                 self.writeln(format_args!(
@@ -573,26 +613,46 @@ mod detail {
                 if let Some(event) = self.gossip_graph.get(event_index) {
                     let attr = EventAttributes::new(
                         event.inner(),
+                        self.event_to_short_name(event.inner()),
                         meta_events.get(&event_index),
                         self.observations,
                         &self.peer_list,
                     );
                     self.writeln(format_args!(
                         "  \"{}\" {}",
-                        event.short_name(),
+                        self.event_to_short_name(&event),
                         attr.to_string()
                     ))?;
 
-                    event.write_cause_to_dot_format(&mut self.file, &self.observations)?;
+                    self.write_cause_to_dot_format(&event)?;
 
-                    let last_ancestors =
-                        convert_peer_index_map(event.last_ancestors(), &self.peer_list);
+                    let last_ancestors = self.convert_peer_index_map(event.last_ancestors());
                     writeln!(&mut self.file, "/// last_ancestors: {:?}", last_ancestors)?;
 
                     self.writeln(format_args!(""))?;
                 }
             }
             Ok(())
+        }
+
+        pub fn write_cause_to_dot_format(
+            &mut self,
+            event: &IndexedEventRef<S::PublicId>,
+        ) -> io::Result<()> {
+            let observation = match event.cause() {
+                Cause::Request { .. } => "Request".to_string(),
+                Cause::Response { .. } => "Response".to_string(),
+                Cause::Observation { ref vote, .. } => {
+                    if let Some(observation) = self.observations.get(vote.payload_key()) {
+                        format!("Observation({:?})", observation)
+                    } else {
+                        "Observation(?)".to_string()
+                    }
+                }
+                Cause::Initial => "Initial".to_string(),
+            };
+
+            writeln!(&mut self.file, "/// cause: {}", observation)
         }
 
         fn write_meta_elections(&mut self) -> io::Result<()> {
@@ -626,8 +686,7 @@ mod detail {
                 self.indentation()
             ));
             self.indent();
-            let round_hashes =
-                convert_peer_index_map(&self.meta_election.round_hashes, &self.peer_list);
+            let round_hashes = self.convert_peer_index_map(&self.meta_election.round_hashes);
             for (peer, hashes) in round_hashes {
                 lines.push(format!(
                     "{}{}{:?} -> [",
@@ -660,7 +719,7 @@ mod detail {
             self.indent();
 
             let interesting_events =
-                convert_peer_index_map(&self.meta_election.interesting_events, &self.peer_list);
+                self.convert_peer_index_map(&self.meta_election.interesting_events);
             for (peer, events) in interesting_events {
                 let event_names: Vec<String> = events
                     .iter()
@@ -682,7 +741,7 @@ mod detail {
                 "{}{}all_voters: {:?}",
                 Self::COMMENT,
                 self.indentation(),
-                convert_peer_index_set(&self.meta_election.all_voters, &self.peer_list)
+                self.convert_peer_index_set(&self.meta_election.all_voters)
             ));
 
             // write unconsensused events
@@ -690,8 +749,7 @@ mod detail {
                 .meta_election
                 .unconsensused_events
                 .iter()
-                .filter_map(|index| self.gossip_graph.get(*index))
-                .map(|event| event.short_name())
+                .filter_map(|index| self.index_to_short_name(*index))
                 .collect();
             lines.push(format!(
                 "{}{}unconsensused_events: {:?}",
@@ -714,10 +772,10 @@ mod detail {
                 .iter()
                 .filter_map(|(index, mev)| {
                     let event = self.gossip_graph.get(*index)?;
-                    let creator_id = self.peer_list.get(event.creator()).map(|peer| peer.id())?;
+                    let creator_id = self.index_to_peer_id(event.creator());
 
                     let creator_and_index = (creator_id, event.index_by_creator());
-                    let short_name_and_mev = (event.short_name(), mev);
+                    let short_name_and_mev = (self.event_to_short_name(&event), mev);
                     Some((creator_and_index, short_name_and_mev))
                 })
                 .collect::<BTreeMap<_, _>>();
@@ -734,12 +792,12 @@ mod detail {
                     "{}{}observees: {:?}",
                     Self::COMMENT,
                     self.indentation(),
-                    convert_peer_index_set(&mev.observees, &self.peer_list)
+                    self.convert_peer_index_set(&mev.observees)
                 ));
                 let interesting_content = mev
                     .interesting_content
                     .iter()
-                    .map(|obs_key| unwrap!(self.observations.get(obs_key)).observation.clone())
+                    .map(|obs_key| unwrap!(self.observations.get(obs_key)).clone())
                     .collect::<Vec<_>>();
                 lines.push(format!(
                     "{}{}interesting_content: {:?}",
@@ -773,6 +831,23 @@ mod detail {
             self.writeln(format_args!("{}", lines.join("\n")))?;
             Ok(())
         }
+
+        fn convert_peer_index_set(&self, input: &PeerIndexSet) -> BTreeSet<DotPeerId> {
+            input
+                .iter()
+                .map(|index| self.index_to_peer_id(index))
+                .collect()
+        }
+
+        fn convert_peer_index_map<'v, V>(
+            &self,
+            input: &'v PeerIndexMap<V>,
+        ) -> BTreeMap<DotPeerId, &'v V> {
+            input
+                .iter()
+                .map(|(index, value)| (self.index_to_peer_id(index), value))
+                .collect()
+        }
     }
 
     struct EventAttributes {
@@ -782,16 +857,17 @@ mod detail {
     }
 
     impl EventAttributes {
-        fn new<T: NetworkEvent, S: SecretId>(
+        fn new<S: SecretId>(
             event: &Event<S::PublicId>,
+            event_short_name: String,
             opt_meta_event: Option<&MetaEvent>,
-            observations: &ObservationStore<T, S::PublicId>,
+            observations: &DotObservationStore,
             peer_list: &PeerList<S>,
         ) -> Self {
             let mut attr = EventAttributes {
                 fillcolor: "fillcolor=white",
                 is_rectangle: false,
-                label: event.short_name().to_string(),
+                label: event_short_name,
             };
 
             attr.label = format!(
@@ -801,11 +877,7 @@ mod detail {
                 attr.label
             );
 
-            if let Some(event_payload) = event
-                .payload_key()
-                .and_then(|key| observations.get(key))
-                .map(|info| &info.observation)
-            {
+            if let Some(event_payload) = event.payload_key().and_then(|key| observations.get(key)) {
                 attr.label = format!(
                     "{}<tr><td colspan=\"6\">{:?}</td></tr>\n",
                     attr.label, event_payload
@@ -819,7 +891,7 @@ mod detail {
                     let interesting_content = meta_event
                         .interesting_content
                         .iter()
-                        .map(|obs_key| &unwrap!(observations.get(obs_key)).observation)
+                        .map(|obs_key| unwrap!(observations.get(obs_key)))
                         .collect::<Vec<_>>();
                     attr.label = format!(
                         "{}<tr><td colspan=\"6\">{:?}</td></tr>",
@@ -854,29 +926,198 @@ mod detail {
         }
     }
 
-    fn convert_peer_index_set<'a, 'b, S>(
-        input: &'a PeerIndexSet,
-        peer_list: &'b PeerList<S>,
-    ) -> BTreeSet<&'b S::PublicId>
-    where
-        S: SecretId,
-    {
-        input
+    #[derive(PartialEq, Eq, Ord, PartialOrd, Clone)]
+    struct DotPeerId {
+        value: String,
+    }
+
+    impl Debug for DotPeerId {
+        fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+            write!(formatter, "{}", self.value)
+        }
+    }
+
+    type DotObservationStore = BTreeMap<ObservationKey, DotObservation>;
+
+    struct DotObservation {
+        value: String,
+    }
+
+    impl Debug for DotObservation {
+        fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+            write!(formatter, "{}", self.value)
+        }
+    }
+
+    impl DotObservation {
+        fn new<T: NetworkEvent, P: PublicId>(
+            key: &ObservationKey,
+            observation: &Observation<T, P>,
+        ) -> Self {
+            let value = match observation {
+                Observation::Genesis(group) => format!(
+                    "Genesis({:?})",
+                    group.iter().map(sanitize_peer_id).collect::<BTreeSet<_>>()
+                ),
+                Observation::Add { peer_id, .. } => format!("Add({:?})", sanitize_peer_id(peer_id)),
+                Observation::Remove { peer_id, .. } => {
+                    format!("Remove({:?})", sanitize_peer_id(peer_id))
+                }
+                Observation::Accusation { offender, malice } => format!(
+                    "Accusation {{ {:?}, {:?} }}",
+                    sanitize_peer_id(offender),
+                    malice
+                ),
+                Observation::OpaquePayload(payload) => {
+                    let max_length = 16;
+                    let mut payload_str = sanitize_string(format!("{:?}", payload));
+
+                    if payload_str.len() > max_length {
+                        let key_length = 10;
+                        let mut payload_hash = format!("{:?}", key.hash());
+
+                        payload_hash.truncate(key_length);
+                        payload_str.truncate(max_length - key_length);
+
+                        payload_str = payload_hash + &payload_str;
+                    }
+                    format!("OpaquePayload({})", payload_str)
+                }
+            };
+
+            DotObservation { value: value }
+        }
+    }
+
+    fn sanitize_peer_ids<S: SecretId>(peer_list: &PeerList<S>) -> PeerIndexMap<DotPeerId> {
+        peer_list
             .iter()
-            .filter_map(|index| peer_list.get(index).map(|peer| peer.id()))
+            .map(|(index, peer)| (index, sanitize_peer_id(peer.id())))
             .collect()
     }
 
-    fn convert_peer_index_map<'a, 'b, S, T>(
-        input: &'a PeerIndexMap<T>,
-        peer_list: &'b PeerList<S>,
-    ) -> BTreeMap<&'b S::PublicId, &'a T>
-    where
-        S: SecretId,
-    {
-        input
+    fn sanitize_peer_id<P: PublicId>(peer_id: &P) -> DotPeerId {
+        DotPeerId {
+            value: sanitize_string(format!("{:?}", peer_id)),
+        }
+    }
+
+    fn sanitize_string(mut value: String) -> String {
+        value.retain(|c| c.is_ascii() && c.is_alphanumeric());
+        value
+    }
+
+    fn short_peer_id_names(names: &PeerIndexMap<DotPeerId>) -> PeerIndexMap<DotPeerId> {
+        if names.is_empty() {
+            return PeerIndexMap::new();
+        }
+
+        let ids = {
+            let mut ids: Vec<_> = names.iter().map(|(_index, id)| id.value.as_str()).collect();
+            ids.sort();
+            ids
+        };
+
+        let common_prefixes_len = ids
+            .windows(2)
+            .map(|adjacent: &[&str]| find_mismatch(adjacent[0].as_bytes(), adjacent[1].as_bytes()))
+            .collect::<Vec<_>>();
+
+        let prefix_len: usize = *unwrap!(common_prefixes_len.iter().min());
+        let mismatch_len: usize = *unwrap!(common_prefixes_len.iter().max()) + 1;
+
+        names
             .iter()
-            .filter_map(|(index, value)| peer_list.get(index).map(|peer| (peer.id(), value)))
+            .map(|(index, id)| {
+                (
+                    index,
+                    DotPeerId {
+                        value: id.value[prefix_len..min(mismatch_len, id.value.len())].to_string(),
+                    },
+                )
+            })
             .collect()
+    }
+
+    fn find_mismatch(s1: &[u8], s2: &[u8]) -> usize {
+        s1.iter()
+            .enumerate()
+            .position(|(index, c)| s2.get(index) != Some(&c))
+            .unwrap_or_else(|| min(s1.len(), s2.len()))
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        fn new_dot_peer_id_peer_index_map(values: &[(usize, &str)]) -> PeerIndexMap<DotPeerId> {
+            values
+                .iter()
+                .map(|(index, string)| {
+                    (
+                        PeerIndex::new_test_peer_index(*index),
+                        DotPeerId {
+                            value: string.to_string(),
+                        },
+                    )
+                })
+                .collect()
+        }
+
+        #[test]
+        /// Basic happy path
+        fn test_find_mismatch() {
+            let expected = [
+                ("Alice", "Bob", 0),
+                ("Alice", "Al", 2),
+                ("", "", 0),
+                ("Alice", "Aline", 3),
+            ];
+
+            let actual = expected
+                .iter()
+                .map(|(s1, s2, _)| (*s1, *s2, find_mismatch(s1.as_bytes(), s2.as_bytes())))
+                .collect::<Vec<_>>();
+
+            assert_eq!(expected, actual.as_slice());
+        }
+
+        #[test]
+        /// Basic happy path
+        fn test_short_peer_id_names() {
+            //
+            // Arrange
+            //
+            let names = [
+                [(3, "Alice"), (2, "Bob"), (6, "Carol")],
+                [(3, "Alice"), (2, "Al"), (6, "Aline")],
+                [(3, "Alice"), (2, "Bob"), (6, "Anne")],
+            ]
+            .iter()
+            .map(|list| new_dot_peer_id_peer_index_map(list))
+            .collect::<Vec<_>>();
+
+            let expected = [
+                [(3, "A"), (2, "B"), (6, "C")],
+                [(3, "ic"), (2, ""), (6, "in")],
+                [(3, "Al"), (2, "Bo"), (6, "An")],
+            ]
+            .iter()
+            .map(|list| new_dot_peer_id_peer_index_map(list))
+            .collect::<Vec<_>>();
+
+            //
+            // Act
+            //
+            let actual = names
+                .iter()
+                .map(|ids| short_peer_id_names(&ids))
+                .collect::<Vec<_>>();
+
+            //
+            // Assert
+            //
+            assert_eq!(expected, actual);
+        }
     }
 }

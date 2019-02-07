@@ -118,6 +118,29 @@ fn bench(c: &mut Criterion) {
     ] {
         bench_dot_file(c, "bench_section_size_evt16", name);
     }
+
+    for name in &[
+        "PublicIdname48840d-054",
+        "PublicIdname48840d-111",
+        "PublicIdname48840d-112",
+        "PublicIdnamecdfb7c-054",
+        "PublicIdnamecdfb7c-109",
+        "PublicIdnamecdfb7c-190",
+        "PublicIdnamee870b5-054",
+        "PublicIdnamee870b5-109",
+        "PublicIdnamee870b5-190",
+    ] {
+        // Benchmark generated using routing test with seed Some([0,1,2,4]).
+        // Only the last dumps before a section change were copied (last before drop in size).
+        //
+        // `PARSEC_DUMP_GRAPH_SVG=0 PARSEC_DUMP_GRAPH_PEERS=PublicIdname48840d,PublicIdnamee870b5,PublicIdnamecdfb7c`
+        // `RUSTFLAGS=-g RUST_BACKTRACE=1 cargo test --release --features=mock merge_three_sections_into_one`
+        bench_dot_file(
+            c,
+            "bench_routing/mock_crust_merge_merge_three_sections_into_one",
+            name,
+        );
+    }
 }
 
 #[cfg(feature = "testing")]
