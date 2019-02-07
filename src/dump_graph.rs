@@ -269,10 +269,6 @@ mod detail {
         fs::remove_dir(path)
     }
 
-    fn first_char<D: Debug>(id: &D) -> Option<char> {
-        format!("{:?}", id).chars().next()
-    }
-
     fn as_short_string(value: Option<bool>) -> &'static str {
         match value {
             None => "-",
@@ -281,8 +277,8 @@ mod detail {
         }
     }
 
-    fn dump_meta_votes<S: SecretId>(
-        peer_list: &PeerList<S>,
+    fn dump_meta_votes(
+        short_peer_ids: &PeerIndexMap<DotPeerId>,
         meta_votes: &PeerIndexMap<Vec<MetaVote>>,
         comment: bool,
     ) -> Vec<String> {
@@ -300,8 +296,10 @@ mod detail {
             );
         }
         for (peer_index, meta_votes) in meta_votes {
-            let peer_id = unwrap!(peer_list.get(peer_index)).id();
-            let mut prefix = format!("{}: ", first_char(peer_id).unwrap_or('?'));
+            let prefix = format!("{}: ", unwrap!(short_peer_ids.get(peer_index)).value);
+            let blank_prefix = " ".repeat(prefix.len()).to_string();
+
+            let mut prefix: &str = prefix.as_str();
             for mv in meta_votes {
                 let est = mv.estimates.as_short_string();
                 let bin = mv.bin_values.as_short_string();
@@ -319,11 +317,10 @@ mod detail {
                         prefix, mv.round, mv.step, est, bin, aux, dec
                     )
                 };
-                // we want only the first line to have the prefix
-                // wrapping in an `if` avoids multiple allocations
-                if prefix != "   " {
-                    prefix = "   ".to_string();
-                }
+
+                // Only the first line have the prefix
+                prefix = blank_prefix.as_str();
+
                 lines.push(line);
             }
         }
@@ -616,7 +613,7 @@ mod detail {
                         self.event_to_short_name(event.inner()),
                         meta_events.get(&event_index),
                         self.observations,
-                        &self.peer_list,
+                        &self.short_peer_ids,
                     );
                     self.writeln(format_args!(
                         "  \"{}\" {}",
@@ -814,7 +811,7 @@ mod detail {
                     ));
                     self.indent();
                     lines.extend(
-                        dump_meta_votes(&self.peer_list, &mev.meta_votes, true)
+                        dump_meta_votes(&self.short_peer_ids, &mev.meta_votes, true)
                             .into_iter()
                             .map(|s| format!("{}{}{}", Self::COMMENT, self.indentation(), s)),
                     );
@@ -857,12 +854,12 @@ mod detail {
     }
 
     impl EventAttributes {
-        fn new<S: SecretId>(
-            event: &Event<S::PublicId>,
+        fn new<P: PublicId>(
+            event: &Event<P>,
             event_short_name: String,
             opt_meta_event: Option<&MetaEvent>,
             observations: &DotObservationStore,
-            peer_list: &PeerList<S>,
+            short_peer_ids: &PeerIndexMap<DotPeerId>,
         ) -> Self {
             let mut attr = EventAttributes {
                 fillcolor: "fillcolor=white",
@@ -902,7 +899,7 @@ mod detail {
                 }
                 if !meta_event.meta_votes.is_empty() {
                     let meta_votes =
-                        dump_meta_votes(peer_list, &meta_event.meta_votes, false).join("\n");
+                        dump_meta_votes(short_peer_ids, &meta_event.meta_votes, false).join("\n");
                     attr.label = format!("{}{}", attr.label, meta_votes);
                 }
                 attr.is_rectangle = true;

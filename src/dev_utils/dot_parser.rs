@@ -35,6 +35,7 @@ use pom::char_class::{alphanum, digit, hex_digit, multispace, space};
 use pom::parser::*;
 use pom::Result as PomResult;
 use pom::{DataInput, Parser};
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::{self, Read};
@@ -86,12 +87,22 @@ fn parse_file() -> Parser<u8, ParsedFile> {
     )
 }
 
+thread_local!(static PEER_IDS: RefCell<BTreeMap<String, PeerId>> =
+        RefCell::new(BTreeMap::new()));
+
 fn parse_peer_id() -> Parser<u8, PeerId> {
     is_a(alphanum)
         .repeat(1..)
         .collect()
         .convert(String::from_utf8)
-        .map(|s| PeerId::new(&s))
+        .map(|s| {
+            PEER_IDS.with(|peer_ids| {
+                let mut borrowed_peer_ids = peer_ids.borrow_mut();
+                borrowed_peer_ids
+                    .entry(s.clone())
+                    .or_insert_with(|| PeerId::new(&s)).clone()
+            })
+        })
 }
 
 fn parse_our_id() -> Parser<u8, PeerId> {
