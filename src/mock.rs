@@ -14,6 +14,7 @@ use safe_crypto::{gen_sign_keypair, PublicSignKey, SecretSignKey};
 use std::cmp::Ordering;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
+use std::cell::RefCell;
 
 pub const NAMES: &[&str] = &[
     "Alice", "Bob", "Carol", "Dave", "Eric", "Fred", "Gina", "Hank", "Iris", "Judy", "Kent",
@@ -27,6 +28,12 @@ lazy_static! {
         .map(|name| PeerId::new_with_random_keypair(name))
         .collect();
 }
+
+static PEER_IDS: RefCell<BTreeMap<String, PeerId>> =
+    RefCell::new(
+        PEERS.uter().enumerate().map(|(index, id)| {
+            (Names[index].to_string(), id.clone())
+        }).collect());
 
 /// **NOT FOR PRODUCTION USE**: Mock signature type.
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
