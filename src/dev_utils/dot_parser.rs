@@ -35,7 +35,6 @@ use pom::char_class::{alphanum, digit, hex_digit, multispace, space};
 use pom::parser::*;
 use pom::Result as PomResult;
 use pom::{DataInput, Parser};
-use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::{self, Read};
@@ -87,23 +86,12 @@ fn parse_file() -> Parser<u8, ParsedFile> {
     )
 }
 
-thread_local!(static PEER_IDS: RefCell<BTreeMap<String, PeerId>> =
-        RefCell::new(BTreeMap::new()));
-
 fn parse_peer_id() -> Parser<u8, PeerId> {
     is_a(alphanum)
         .repeat(1..)
         .collect()
         .convert(String::from_utf8)
-        .map(|s| {
-            PEER_IDS.with(|peer_ids| {
-                let mut borrowed_peer_ids = peer_ids.borrow_mut();
-                borrowed_peer_ids
-                    .entry(s.clone())
-                    .or_insert_with(|| PeerId::new(&s))
-                    .clone()
-            })
-        })
+        .map(|s| PeerId::new(&s))
 }
 
 fn parse_our_id() -> Parser<u8, PeerId> {
@@ -601,14 +589,15 @@ fn parse_meta_votes() -> Parser<u8, BTreeMap<PeerId, Vec<MetaVote>>> {
 }
 
 fn parse_peer_meta_votes() -> Parser<u8, (PeerId, Vec<MetaVote>)> {
-    let peer_line = comment_prefix() * is_a(alphanum).map(char::from) - seq(b": ")
+    let peer_line = comment_prefix() * is_a(alphanum).repeat(1..).convert(String::from_utf8)
+        - seq(b": ")
         + parse_meta_vote()
         - next_line();
     let next_line = comment_prefix() * parse_meta_vote() - next_line();
-    (peer_line + next_line.repeat(0..)).map(|((peer_initial, first_mv), other_mvs)| {
+    (peer_line + next_line.repeat(0..)).map(|((peer_short_name, first_mv), other_mvs)| {
         let mut mvs = vec![first_mv];
         mvs.extend(other_mvs);
-        (PeerId::from_initial(peer_initial), mvs)
+        (PeerId::from_short_name(&peer_short_name), mvs)
     })
 }
 

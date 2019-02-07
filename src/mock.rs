@@ -12,9 +12,10 @@ use rand::{Rand, Rng};
 use safe_crypto::Signature as SafeSignature;
 use safe_crypto::{gen_sign_keypair, PublicSignKey, SecretSignKey};
 use std::cmp::Ordering;
+use std::collections::BTreeMap;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
-use std::cell::RefCell;
+use std::sync::Mutex;
 
 pub const NAMES: &[&str] = &[
     "Alice", "Bob", "Carol", "Dave", "Eric", "Fred", "Gina", "Hank", "Iris", "Judy", "Kent",
@@ -23,17 +24,15 @@ pub const NAMES: &[&str] = &[
 ];
 
 lazy_static! {
-    static ref PEERS: Vec<PeerId> = NAMES
-        .iter()
-        .map(|name| PeerId::new_with_random_keypair(name))
-        .collect();
+    // List of peers starting with NAMES (To keep random generated key the same)
+    // Will grow with any new unique PeerId created
+    static ref PEER_IDS: Mutex<BTreeMap<String, PeerId>> = Mutex::new(
+        NAMES
+            .iter()
+            .map(|name| (name.to_string(), PeerId::new_with_random_keypair(name)))
+            .collect()
+    );
 }
-
-static PEER_IDS: RefCell<BTreeMap<String, PeerId>> =
-    RefCell::new(
-        PEERS.uter().enumerate().map(|(index, id)| {
-            (Names[index].to_string(), id.clone())
-        }).collect());
 
 /// **NOT FOR PRODUCTION USE**: Mock signature type.
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -57,10 +56,9 @@ pub struct PeerId {
 
 impl PeerId {
     pub fn new(id: &str) -> Self {
-        PEERS
-            .iter()
-            .find(|peer| peer.id == id)
-            .unwrap_or(&PeerId::new_with_random_keypair(id))
+        unwrap!(PEER_IDS.lock())
+            .entry(id.to_string())
+            .or_insert_with(|| PeerId::new_with_random_keypair(id))
             .clone()
     }
 
@@ -75,15 +73,18 @@ impl PeerId {
 
     // Only being used by the dot_parser.
     #[cfg(any(test, feature = "testing"))]
-    pub fn from_initial(initial: char) -> Self {
-        for name in NAMES.iter() {
-            if name.starts_with(initial) {
-                return PeerId::new(name);
+    pub fn from_short_name(short_name: &str) -> Self {
+        let peer_ids = unwrap!(PEER_IDS.lock());
+
+        for (name, id) in peer_ids.iter() {
+            if name.starts_with(short_name) {
+                // Wrong
+                return id.clone();
             }
         }
         panic!(
             "cannot find a name starts with {:?} within {:?}",
-            initial, NAMES
+            short_name, peer_ids
         );
     }
 
