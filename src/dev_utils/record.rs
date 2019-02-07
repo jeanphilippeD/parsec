@@ -243,10 +243,7 @@ mod tests {
     use super::*;
     use crate::parsec::assert_same_events;
 
-    #[test]
-    fn smoke() {
-        let path = "input_graphs/benches/minimal.dot";
-
+    fn smoke(path: &str) {
         let contents = unwrap!(parse_dot_file(path));
         let expected = Parsec::from_parsed_contents(contents);
 
@@ -255,5 +252,15 @@ mod tests {
         let actual = replay.play();
 
         assert_same_events(&actual, &expected);
+    }
+
+    #[test]
+    fn smoke_parsec() {
+        smoke("input_graphs/benches/minimal.dot")
+    }
+
+    #[test]
+    fn smoke_routing() {
+        smoke("input_graphs/tests_replay_routing_dumps/PublicIdname12abcd.dot")
     }
 }

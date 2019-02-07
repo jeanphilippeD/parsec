@@ -100,7 +100,8 @@ fn parse_peer_id() -> Parser<u8, PeerId> {
                 let mut borrowed_peer_ids = peer_ids.borrow_mut();
                 borrowed_peer_ids
                     .entry(s.clone())
-                    .or_insert_with(|| PeerId::new(&s)).clone()
+                    .or_insert_with(|| PeerId::new(&s))
+                    .clone()
             })
         })
 }

@@ -155,18 +155,36 @@ fn main() {
     );
 
     let _ = scenarios
-        .add(
-            "functional_tests::handle_malice_genesis_event_creator_not_genesis_member",
-            |env| {
-                let obs = ObservationSchedule {
-                    genesis: peer_ids!("Alice", "Bob", "Carol", "Dave"),
-                    schedule: vec![(0, AddPeer(PeerId::new("Eric")))],
-                };
+        .add("tests::replay_routing_dumps", |env| {
+            let obs = ObservationSchedule {
+                genesis: peer_ids!(
+                    "PublicIdname12abcd",
+                    "PublicIdnameab4598",
+                    "PublicIdnamecdb63e",
+                    "PublicIdnameef4fb9"
+                ),
+                schedule: vec![
+                    (0, AddPeer(PeerId::new("PublicIdname123456"))),
+                    (0, RemovePeer(PeerId::new("PublicIdnameef4fb9"))),
+                    (
+                        50,
+                        Opaque(Transaction::new(
+                            "SectionInfo(SectionInfo(prefix: Prefix(123), ...))",
+                        )),
+                    ),
+                    (
+                        50,
+                        Opaque(Transaction::new(
+                            "SectionInfo(SectionInfo(prefix: Prefix(234), ...))",
+                        )),
+                    ),
+                ],
+            };
 
-                Schedule::from_observation_schedule(env, &ScheduleOptions::default(), obs)
-            },
-        )
-        .seed([848911612, 2362592349, 3178199135, 2458552022]);
+            Schedule::from_observation_schedule(env, &ScheduleOptions::default(), obs)
+        })
+        .seed([1, 2, 3, 4])
+        .file("PublicIdname12abcd", "PublicIdname12abcd.dot");
 
     let _ = scenarios
         .add(
@@ -185,6 +203,21 @@ fn main() {
         .file("Alice", "alice.dot")
         .file("Bob", "bob.dot")
         .file("Carol", "carol.dot");
+
+    let _ = scenarios.add(
+        "functional_tests::handle_malice_genesis_event_not_after_initial",
+        |env| {
+            let obs = ObservationSchedule {
+                genesis: peer_ids!("Alice", "Bob", "Carol", "Dave"),
+                schedule: vec![
+                    (0, Fail(PeerId::new("Dave"))),
+                    (50, Opaque(Transaction::new("ABCD"))),
+                ],
+            };
+
+            Schedule::from_observation_schedule(env, &ScheduleOptions::default(), obs)
+        },
+    );
 
     let _ = scenarios
         .add("benches", |env| {
@@ -230,26 +263,27 @@ fn main() {
         .file("Alice", "dynamic.dot");
 
     let add_bench_scalability = |s: &mut Scenarios, opaque_to_add: usize, genesis_size: usize| {
-        let file_name_a = format!("a_node{}_opaque_evt{}.dot", genesis_size, opaque_to_add );
-        let file_name_b = format!("b_node{}_opaque_evt{}.dot", genesis_size, opaque_to_add );
-        let file_name_c = format!("c_node{}_opaque_evt{}.dot", genesis_size, opaque_to_add );
-        let bench_name = format!("bench_section_size_evt{}", opaque_to_add );
+        let file_name_a = format!("a_node{}_opaque_evt{}.dot", genesis_size, opaque_to_add);
+        let file_name_b = format!("b_node{}_opaque_evt{}.dot", genesis_size, opaque_to_add);
+        let file_name_c = format!("c_node{}_opaque_evt{}.dot", genesis_size, opaque_to_add);
+        let bench_name = format!("bench_section_size_evt{}", opaque_to_add);
 
-        let _ = s.add(bench_name, move |env| {
-            Schedule::new(
-                env,
-                &ScheduleOptions {
-                    genesis_size,
-                    opaque_to_add,
-                    votes_before_gossip: true,
-                    ..Default::default()
-                },
-            )
-        })
-        .seed([1, 2, 3, 4])
-        .file("Alice", &file_name_a)
-        .file("Bob", &file_name_b)
-        .file("Carol", &file_name_c);
+        let _ = s
+            .add(bench_name, move |env| {
+                Schedule::new(
+                    env,
+                    &ScheduleOptions {
+                        genesis_size,
+                        opaque_to_add,
+                        votes_before_gossip: true,
+                        ..Default::default()
+                    },
+                )
+            })
+            .seed([1, 2, 3, 4])
+            .file("Alice", &file_name_a)
+            .file("Bob", &file_name_b)
+            .file("Carol", &file_name_c);
     };
 
     add_bench_scalability(&mut scenarios, 8, 4);
@@ -323,9 +357,7 @@ impl Scenario {
         let mut env = Environment::new(self.seed);
         let schedule = (self.schedule_fn)(&mut env);
         println!("Using {:?}", env.rng);
-        let result =
-            env.network
-                .execute_schedule(&mut env.rng, schedule);
+        let result = env.network.execute_schedule(&mut env.rng, schedule);
         assert!(result.is_ok(), "{:?}", result);
 
         if self.files.is_empty() {
