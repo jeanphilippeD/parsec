@@ -1284,34 +1284,51 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
     where
         I: IntoIterator<Item = (PeerIndex, bool)>,
     {
-        // Sort the payloads first by the number of votes and in case of a tie, lexicographically
-        // by the observation keys. This is so every node will arrive at the same ordering.
-        let payloads = decided_meta_votes
+        use fnv::FnvHashSet;
+
+        let mut payload_iters = decided_meta_votes
             .into_iter()
             .filter_map(|(peer_index, decision)| {
                 if decision {
-                    self.meta_election
-                        .first_interesting_content_by(peer_index)
-                        .cloned()
+                    self.meta_election.interesting_content_by(peer_index)
                 } else {
                     None
                 }
             })
-            .fold(BTreeMap::new(), |mut map, payload_key| {
-                *map.entry(payload_key).or_insert(0) += 1;
-                map
-            });
+            .map(|payload_keys| payload_keys.iter())
+            .collect_vec();
 
-        payloads
-            .into_iter()
-            .sorted_by(|(lhs_key, lhs_count), (rhs_key, rhs_count)| {
-                lhs_count
-                    .cmp(rhs_count)
-                    .reverse()
-                    .then_with(|| lhs_key.consistent_cmp(rhs_key, &self.peer_list))
-            })
-            .map(|(key, _)| key)
-            .collect()
+        let mut all_payloads = Vec::new();
+        let mut all_payload_lookup: FnvHashSet<&ObservationKey> = FnvHashSet::default();
+        loop {
+            let payloads_counts = payload_iters
+                .iter_mut()
+                .filter_map(|iter| iter.find(|key| !all_payload_lookup.contains(key)))
+                .fold(BTreeMap::new(), |mut map, payload_key| {
+                    *map.entry(payload_key).or_insert(0) += 1;
+                    map
+                });
+
+            if payloads_counts.is_empty()
+            {
+                break;
+            }
+
+            let new_payloads = payloads_counts
+                .into_iter()
+                .sorted_by(|(lhs_key, lhs_count), (rhs_key, rhs_count)| {
+                    lhs_count
+                        .cmp(rhs_count)
+                        .reverse()
+                        .then_with(|| lhs_key.consistent_cmp(rhs_key, &self.peer_list))
+                })
+                .map(|(key, _)| key)
+                .collect_vec();
+            all_payloads.extend(new_payloads.iter().cloned());
+            all_payload_lookup.extend(new_payloads.iter());
+        }
+
+        all_payloads
     }
 
     fn create_blocks(&self, payload_keys: &[ObservationKey]) -> Result<BlockGroup<T, S::PublicId>> {

@@ -135,14 +135,12 @@ impl MetaElection {
             .map(|(peer_index, (event_indices, _))| (peer_index, &event_indices[..]))
     }
 
-    pub fn first_interesting_content_by(&self, creator: PeerIndex) -> Option<&ObservationKey> {
-        let event_index = self
-            .interesting_events
+    pub fn interesting_content_by(&self, creator: PeerIndex) -> Option<&Vec<ObservationKey>> {
+        self.interesting_events
             .get(creator)
-            .and_then(|(indices, _)| indices.first())?;
-        let meta_event = self.meta_events.get(event_index)?;
-
-        meta_event.interesting_content.first()
+            .and_then(|(indices, _)| indices.first())
+            .and_then(|event_index| self.meta_events.get(event_index))
+            .map(|meta_event| &meta_event.interesting_content)
     }
 
     pub fn is_already_interesting_content(
