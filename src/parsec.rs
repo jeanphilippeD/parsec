@@ -1358,11 +1358,9 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
             .iter()
             .map(|payload_key| {
                 let votes = self
-                    .graph
-                    .iter()
+                    .unconsensused_events(Some(payload_key))
                     .map(|event| event.inner())
                     .filter(|event| voters.contains(event.creator()))
-                    .filter(|event| event.payload_key() == Some(payload_key))
                     .filter_map(|event| {
                         let (vote, key) = event.vote_and_payload_key(&self.observations)?;
                         let creator_id =
