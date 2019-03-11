@@ -41,7 +41,7 @@ pub(crate) struct MetaElection {
     pub(crate) voters: PeerIndexSet,
     // The indices of events for each peer that have a non-empty set of `interesting_content`.
     // The second element allow fast lookup for existing interesting_content.
-    pub(crate) interesting_events: PeerIndexMap<(Vec<EventIndex>, FnvHashSet<ObservationKey>)>,
+    pub(crate) interesting_events: PeerIndexMap<(Vec<EventIndex>, BTreeSet<ObservationKey>)>,
     // All events that carry a payload that hasn't yet been consensused.
     pub(crate) unconsensused_events: UnconsensusedEvents,
     // Events that carry a payload that hasn't yet been consensused and not interesting.
@@ -274,7 +274,7 @@ impl MetaElection {
         let (indices, contents) = self
             .interesting_events
             .entry(creator)
-            .or_insert_with(|| (Vec::new(), FnvHashSet::default()));
+            .or_insert_with(|| (Vec::new(), BTreeSet::default()));
         indices.push(event_index);
         contents.extend(interesting_content);
 

@@ -33,7 +33,7 @@ use crate::observation::{
 };
 use crate::peer_list::{PeerIndex, PeerIndexMap, PeerIndexSet, PeerList, PeerState};
 use crate::round_hash::RoundHash;
-use fnv::{FnvHashMap, FnvHashSet};
+use fnv::FnvHashMap; //{FnvHashMap, FnvHashSet};
 use itertools::Itertools;
 use pom::char_class::{alphanum, digit, hex_digit, multispace, space};
 use pom::parser::*;
@@ -901,7 +901,7 @@ fn convert_to_meta_election(
                     )
                 })
                 .collect_vec();
-            let contents: FnvHashSet<_> = indices
+            let contents: BTreeSet<_> = indices
                 .iter()
                 .filter_map(|index| meta_events.get(index))
                 .flat_map(|meta_event| &meta_event.interesting_content)
