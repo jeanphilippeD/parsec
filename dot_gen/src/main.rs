@@ -467,6 +467,28 @@ fn add_bench_section_size(scenarios: &mut Scenarios) {
             &format!("{}_interleave", opaque_to_add),
         );
     }
+
+    for genesis_size in &[4, 8, 16, 32] {
+        let opaque_to_add = 8192;
+        add_bench_scalability_common(
+            scenarios,
+            ScheduleOptions {
+                genesis_size: *genesis_size,
+                opaque_to_add,
+                // 1 gossip event every 10 steps in one peer in the network
+                prob_gossip: 0.1 / (*genesis_size as f64 * 8.0),
+                // 1 opaque event per 10 steps
+                prob_opaque: 0.1,
+                // Events will be seen within 2 gossip events
+                max_observation_delay: 20 * 8,
+                // For speed only check consistency at the end
+                intermediate_consistency_checks: false,
+                ..Default::default()
+            },
+            ConsensusMode::Single,
+            &format!("{}_interleave", opaque_to_add),
+        );
+    }
 }
 
 fn add_bench_scalability_common(

@@ -503,6 +503,10 @@ impl Network {
             }
         }
 
+        for peer_id in self.running_peers_ids() {
+            self.check_unexpected_accusations(&peer_id)?;
+        }
+
         self.check_consensus(&peers, min_observations, max_observations)?;
         self.check_blocks_signatories()
     }
@@ -569,7 +573,9 @@ impl Network {
                     self.peer_mut(&peer_id).make_votes();
                     self.handle_messages(&peer_id, step);
                     self.peer_mut(&peer_id).poll_all();
-                    self.check_unexpected_accusations(&peer_id)?;
+                    if options.intermediate_consistency_checks {
+                        self.check_unexpected_accusations(&peer_id)?;
+                    }
                 }
                 Peer::update_network_views(&mut self.peers);
                 let running_peers_ids = self.running_peers_ids();
