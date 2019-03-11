@@ -254,23 +254,23 @@ mod detail {
         let _ = force_symlink_dir(&*ROOT_DIR, ROOT_DIR_PREFIX.join("latest"));
     }
 
-    fn parent_pos<P: PublicId>(
-        index: usize,
-        parent: Option<IndexedEventRef<P>>,
-        positions: &BTreeMap<EventHash, usize>,
-    ) -> Option<usize> {
-        if let Some(parent_hash) = parent.map(|e| e.inner().hash()) {
-            if let Some(parent_pos) = positions.get(parent_hash) {
-                Some(*parent_pos)
-            } else if *parent_hash == EventHash::ZERO {
-                Some(index)
-            } else {
-                None
-            }
-        } else {
-            Some(index)
-        }
-    }
+    // fn parent_pos<P: PublicId>(
+    //     index: usize,
+    //     parent: Option<IndexedEventRef<P>>,
+    //     positions: &BTreeMap<EventHash, usize>,
+    // ) -> Option<usize> {
+    //     if let Some(parent_hash) = parent.map(|e| e.inner().hash()) {
+    //         if let Some(parent_pos) = positions.get(parent_hash) {
+    //             Some(*parent_pos)
+    //         } else if *parent_hash == EventHash::ZERO {
+    //             Some(index)
+    //         } else {
+    //             None
+    //         }
+    //     } else {
+    //         Some(index)
+    //     }
+    // }
 
     fn force_symlink_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::Result<()> {
         use std::io::ErrorKind;
@@ -448,7 +448,7 @@ mod detail {
             self.writeln(format_args!("  splines=false"))?;
             self.writeln(format_args!("  rankdir=BT\n"))?;
 
-            let positions = self.calculate_positions();
+            let positions = BTreeMap::new(); //self.calculate_positions();
             for (peer_index, peer_id) in self.peer_ids {
                 self.write_subgraph(peer_index, peer_id, &positions)?;
                 self.write_other_parents(peer_index)?;
@@ -494,39 +494,39 @@ mod detail {
             self.writeln(format_args!("{}{}}}", Self::COMMENT, indent))
         }
 
-        fn calculate_positions(&self) -> BTreeMap<EventHash, usize> {
-            let mut positions = BTreeMap::new();
-            while positions.len() < self.gossip_graph.len() {
-                for event in self.gossip_graph {
-                    if !positions.contains_key(event.hash()) {
-                        let self_parent_pos = if let Some(position) = parent_pos(
-                            event.index_by_creator(),
-                            self.gossip_graph.self_parent(event),
-                            &positions,
-                        ) {
-                            position
-                        } else {
-                            continue;
-                        };
-                        let other_parent_pos = if let Some(position) = parent_pos(
-                            event.index_by_creator(),
-                            self.gossip_graph.other_parent(event),
-                            &positions,
-                        ) {
-                            position
-                        } else {
-                            continue;
-                        };
-                        let _ = positions.insert(
-                            *event.hash(),
-                            cmp::max(self_parent_pos, other_parent_pos) + 1,
-                        );
-                        break;
-                    }
-                }
-            }
-            positions
-        }
+        // fn _calculate_positions(&self) -> BTreeMap<EventHash, usize> {
+        //     let mut positions = BTreeMap::new();
+        //     while positions.len() < self.gossip_graph.len() {
+        //         for event in self.gossip_graph {
+        //             if !positions.contains_key(event.hash()) {
+        //                 let self_parent_pos = if let Some(position) = parent_pos(
+        //                     event.index_by_creator(),
+        //                     self.gossip_graph.self_parent(event),
+        //                     &positions,
+        //                 ) {
+        //                     position
+        //                 } else {
+        //                     continue;
+        //                 };
+        //                 let other_parent_pos = if let Some(position) = parent_pos(
+        //                     event.index_by_creator(),
+        //                     self.gossip_graph.other_parent(event),
+        //                     &positions,
+        //                 ) {
+        //                     position
+        //                 } else {
+        //                     continue;
+        //                 };
+        //                 let _ = positions.insert(
+        //                     *event.hash(),
+        //                     cmp::max(self_parent_pos, other_parent_pos) + 1,
+        //                 );
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //     positions
+        // }
 
         fn write_subgraph(
             &mut self,
