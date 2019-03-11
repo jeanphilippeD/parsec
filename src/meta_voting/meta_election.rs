@@ -314,10 +314,11 @@ impl MetaElection {
             self.meta_events.retain(|event_index, _| {
                 event_index.topological_index() >= new_consensus_start_index
             });
+            let decided_keys_lookup: FnvHashSet<_> = decided_keys.iter().collect();
             for meta_event in self.meta_events.values_mut() {
                 meta_event
                     .interesting_content
-                    .retain(|payload_key| !decided_keys.contains(payload_key));
+                    .retain(|payload_key| !decided_keys_lookup.contains(payload_key));
             }
         }
     }
