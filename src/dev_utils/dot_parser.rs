@@ -50,6 +50,7 @@ use std::str::FromStr;
 pub const HEX_DIGITS_PER_BYTE: usize = 2;
 
 type ObservationMap = Vec<(ObservationKey, Observation<Transaction, PeerId>)>;
+type PeerParsedEvent = BTreeMap<i32, (String, ParsedEvent)>;
 
 fn newline() -> Parser<u8, ()> {
     (seq(b"\n") | seq(b"\r\n")).discard()
@@ -998,11 +999,7 @@ fn create_events(
     let mut event_indices = BTreeMap::new();
 
     let graph = std::mem::replace(graph, BTreeMap::new());
-
-    let mut graph: BTreeMap<(Option<PeerIndex>, String), ParsedEvent> = graph
-        .into_iter()
-        .map(|(name, evt)| ((peer_list.get_index(&evt.creator), name.clone()), evt))
-        .collect();
+    let mut graph = in_peer_order(graph, peer_list);
 
     while !graph.is_empty() {
         let (ev_id, next_parsed_event) = next_topological_event(&mut graph, &event_indices);
@@ -1054,29 +1051,75 @@ fn get_event_by_id<'a>(
     indices.get(id).cloned().and_then(|index| graph.get(index))
 }
 
+fn in_peer_order(
+    graph: BTreeMap<String, ParsedEvent>,
+    peer_list: &PeerList<PeerId>,
+) -> BTreeMap<(Option<PeerIndex>, String), PeerParsedEvent> {
+    type Key = (Option<PeerIndex>, (String, i32));
+    let graph: BTreeMap<Key, (String, ParsedEvent)> = graph
+        .into_iter()
+        .map(|(name, evt)| {
+            let parsed_values = name
+                .rsplit('_')
+                .next()
+                .map(|index| (index.len(), index.parse::<i32>()));
+
+            let (index_len, index) = unwrap!(parsed_values, "{}", name);
+            let index = unwrap!(index, "{}", name);
+
+            let prefix = name[0..(name.len() - index_len)].to_string();
+            ((prefix, index), (name.clone(), evt))
+        })
+        .map(|(name, evt)| ((peer_list.get_index(&evt.1.creator), name), evt))
+        .collect();
+
+    let mut new_graph = BTreeMap::new();
+    for ((peer_index, (prefix, index)), event) in graph.into_iter() {
+        let _ = new_graph
+            .entry((peer_index, prefix))
+            .or_insert_with(BTreeMap::new)
+            .insert(index, event);
+    }
+    new_graph
+}
+
 fn next_topological_event(
-    graph: &mut BTreeMap<(Option<PeerIndex>, String), ParsedEvent>,
+    graph: &mut BTreeMap<(Option<PeerIndex>, String), PeerParsedEvent>,
     indices: &BTreeMap<String, EventIndex>,
 ) -> (String, ParsedEvent) {
-    let next_key = unwrap!(graph
-        .iter()
-        .filter(|&(_, ref event)| event
-            .self_parent
-            .as_ref()
-            .map(|ev_id| indices.contains_key(ev_id))
-            .unwrap_or(true)
-            && event
-                .other_parent
-                .as_ref()
-                .map(|ev_id| indices.contains_key(ev_id))
-                .unwrap_or(true))
-        .map(|(key, _)| key)
-        .next())
-    .clone();
-    let ev = unwrap!(graph.remove(&next_key));
+    let next_event = graph
+        .values_mut()
+        .filter_map(|peer_events| {
+            let index_with_parents = peer_events
+                .iter()
+                .next()
+                .filter(|(_, (_, event))| {
+                    let self_parent_found = event
+                        .self_parent
+                        .as_ref()
+                        .map(|ev_id| indices.contains_key(ev_id))
+                        .unwrap_or(true);
+                    let other_parent_found = event
+                        .other_parent
+                        .as_ref()
+                        .map(|ev_id| indices.contains_key(ev_id))
+                        .unwrap_or(true);
 
-    let (_, next_key) = next_key;
-    (next_key, ev)
+                    self_parent_found && other_parent_found
+                })
+                .map(|(index, _)| *index);
+
+            index_with_parents.map(|index| unwrap!(peer_events.remove(&index)))
+        })
+        .next();
+
+    let empty_key = graph
+        .iter()
+        .find(|(_, peer_events)| peer_events.is_empty())
+        .map(|(key, _)| key.clone());
+    let _ = empty_key.map(|key| unwrap!(graph.remove(&key)));
+
+    unwrap!(next_event)
 }
 
 #[cfg(all(test, feature = "dump-graphs"))]
