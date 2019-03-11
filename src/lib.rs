@@ -172,6 +172,11 @@ extern crate serde_derive;
 #[macro_use]
 extern crate unwrap;
 
+use std::alloc::System;
+
+#[global_allocator]
+static GLOBAL: System = System;
+
 mod block;
 mod dump_graph;
 mod error;
