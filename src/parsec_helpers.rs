@@ -16,7 +16,7 @@ use std::usize;
 pub(crate) fn find_interesting_content_for_event<'a, E>(
     builder_event: &E,
     unconsensused_events: impl Iterator<Item = &'a E>,
-    is_already_interesting_content: impl Fn(&ObservationKey) -> bool,
+    _is_already_interesting_content: impl Fn(&ObservationKey) -> bool,
     is_interesting_payload: impl Fn(&ObservationKey) -> bool,
     has_interesting_ancestor: impl Fn(&ObservationKey) -> bool,
 ) -> Vec<ObservationKey>
@@ -30,7 +30,7 @@ where
         .filter_map(|event| {
             event
                 .payload_key()
-                .filter(|payload_key| !is_already_interesting_content(payload_key))
+                //.filter(|payload_key| !is_already_interesting_content(payload_key))
                 .map(|payload_key| {
                     (
                         event,
@@ -312,19 +312,19 @@ mod tests {
             });
         }
 
-        #[test]
-        /// Filter out already interesting payloads
-        fn all_payloads_already_interesting() {
-            test_find_interesting_content_for_event(TestSimpleData {
-                events: Events::new_basic_setup().with_builder_event_sees_other(),
-                payload_properties: PayloadProperties {
-                    is_already_interesting_content: true,
-                    is_interesting_payload: true,
-                    has_interesting_ancestor: false,
-                },
-                expected_payloads: vec![],
-            });
-        }
+        // #[test]
+        // /// Filter out already interesting payloads
+        // fn all_payloads_already_interesting() {
+        //     test_find_interesting_content_for_event(TestSimpleData {
+        //         events: Events::new_basic_setup().with_builder_event_sees_other(),
+        //         payload_properties: PayloadProperties {
+        //             is_already_interesting_content: true,
+        //             is_interesting_payload: true,
+        //             has_interesting_ancestor: false,
+        //         },
+        //         expected_payloads: vec![],
+        //     });
+        // }
 
         #[test]
         /// Basic case where we found no interesting payloads

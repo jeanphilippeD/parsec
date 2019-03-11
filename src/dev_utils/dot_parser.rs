@@ -885,7 +885,7 @@ fn convert_to_meta_election(
         })
         .collect();
 
-    let interesting_events = meta_election
+    let interesting_events: PeerIndexMap<(Vec<_>, _)> = meta_election
         .interesting_events
         .into_iter()
         .map(|(peer_id, events)| {
@@ -937,17 +937,27 @@ fn convert_to_meta_election(
                 map
             },
         );
-    let unconsensused_events = UnconsensusedEvents {
-        ordered_indices: unconsensused_events_indices,
-        indices_by_key: unconsensused_events_keyed_indices,
-    };
+    let unconsensused_not_interesting_events = interesting_events
+        .iter()
+        .map(|(peer_id, (events, _))| {
+            let mut not_interesting_events = unconsensused_events_indices.clone();
+            for indice in events {
+                let _ = not_interesting_events.remove(indice);
+            }
+            (peer_id, not_interesting_events)
+        })
+        .collect();
 
     MetaElection {
         meta_events,
         round_hashes: convert_peer_id_map(meta_election.round_hashes, peer_list),
         voters: convert_peer_id_set(meta_election.voters, peer_list),
         interesting_events,
-        unconsensused_events,
+        unconsensused_events: UnconsensusedEvents {
+           ordered_indices: unconsensused_events_indices,
+           indices_by_key: unconsensused_events_keyed_indices,
+        },
+        unconsensused_not_interesting_events,
         consensus_history: meta_election.consensus_history,
         continue_consensus_start_index: 0,
         new_consensus_start_index: 0,

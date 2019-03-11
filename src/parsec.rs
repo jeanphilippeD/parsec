@@ -861,7 +861,8 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
 
         let payloads = find_interesting_content_for_event(
             builder.event().as_ref(),
-            self.unconsensused_events(None).map(|event| event.inner()),
+            self.unconsensused_not_interesting_events(builder.event().creator())
+                .map(|event| event.inner()),
             is_already_interesting_content,
             is_interesting_payload,
             has_interesting_ancestor,
@@ -1266,6 +1267,15 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
     ) -> impl Iterator<Item = IndexedEventRef<S::PublicId>> {
         self.meta_election
             .unconsensused_events(filter_key)
+            .filter_map(move |index| self.get_known_event(index).ok())
+    }
+
+    fn unconsensused_not_interesting_events(
+        &self,
+        creator: PeerIndex,
+    ) -> impl Iterator<Item = IndexedEventRef<S::PublicId>> {
+        self.meta_election
+            .unconsensused_not_interesting_events(creator)
             .filter_map(move |index| self.get_known_event(index).ok())
     }
 
