@@ -653,6 +653,14 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
             return Ok(PostProcessAction::Continue);
         }
 
+        {
+            let event = get_known_event(self.our_pub_id(), &self.graph, event_index)?;
+            if event.payload_key().is_some() {
+                // Only add meta events for non obaservations: Requesting/Request/Response
+                return Ok(PostProcessAction::Continue);
+            }
+        }
+
         self.create_meta_event(event_index)?;
 
         let payload_keys = self.compute_consensus(event_index);
@@ -981,17 +989,20 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
 
     fn is_descendant_of_observer(&self, event: IndexedEventRef<S::PublicId>) -> bool {
         self.graph
-            .self_parent(event)
+            .self_consensus_parent(event)
             .and_then(|self_parent| self.meta_election.meta_event(self_parent.event_index()))
             .map(|meta_parent| meta_parent.is_observer() || meta_parent.has_ancestor_observer())
             .unwrap_or(false)
     }
 
     fn set_meta_votes(&self, builder: &mut MetaEventBuilder<S::PublicId>) -> Result<()> {
-        let parent_meta_votes = builder
-            .event()
-            .self_parent()
-            .and_then(|parent_hash| self.meta_election.populated_meta_votes(parent_hash));
+        let parent_meta_votes =
+            self.graph
+                .self_consensus_parent(builder.event())
+                .and_then(|parent| {
+                    self.meta_election
+                        .populated_meta_votes(parent.event_index())
+                });
 
         if parent_meta_votes.is_none() && !builder.is_observer() {
             // No meta votes to set for this event

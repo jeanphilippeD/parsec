@@ -131,6 +131,8 @@ fn bench(c: &mut Criterion) {
     for name in &[
         "a_node4_opaque_evt8192",
         "a_node8_opaque_evt8192",
+        "a_node16_opaque_evt8192",
+        "a_node32_opaque_evt8192",
     ] {
         bench_dot_file(
             c,

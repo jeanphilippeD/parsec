@@ -112,6 +112,29 @@ impl<P: PublicId> Graph<P> {
             .and_then(|index| self.get(index))
     }
 
+    /// Returns self-parent of the given event, if any.
+    pub fn self_consensus_parent<E: AsRef<Event<P>>>(
+        &self,
+        event: E,
+    ) -> Option<IndexedEventRef<P>> {
+        let mut event = event.as_ref();
+        loop {
+            let opt_parent = event.self_parent().and_then(|index| self.get(index));
+            if let Some(parent) = opt_parent {
+                if parent.payload_key().is_none() {
+                    return opt_parent;
+                }
+                event = parent.inner();
+            } else {
+                return None;
+            }
+        }
+        // event
+        //     .as_ref()
+        //     .self_parent()
+        //     .and_then(|index| self.get(index))
+    }
+
     /// Returns other-parent of the given event, if any.
     pub fn other_parent<E: AsRef<Event<P>>>(&self, event: E) -> Option<IndexedEventRef<P>> {
         event
