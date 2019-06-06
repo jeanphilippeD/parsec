@@ -12,14 +12,16 @@ use super::peer::{Peer, PeerStatus};
 use super::schedule::{Schedule, ScheduleEvent, ScheduleOptions};
 use super::Observation;
 use crate::block::Block;
+use crate::common_coin::CommonCoin;
 use crate::error::Error;
 use crate::gossip::{Request, Response};
 use crate::mock::{PeerId, Transaction};
 use crate::observation::{
     is_more_than_two_thirds, ConsensusMode, Malice, Observation as ParsecObservation,
 };
-use rand::{seq::SliceRandom, Rng};
+use rand::{seq::SliceRandom, thread_rng, Rng};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use threshold_crypto::{PublicKeySet, SecretKeySet};
 
 enum Message {
     Request(Request<Transaction, PeerId>, usize),
@@ -35,6 +37,7 @@ struct QueueEntry {
 pub struct Network {
     pub peers: BTreeMap<PeerId, Peer>,
     genesis: BTreeSet<PeerId>,
+    genesis_coin_keys: PublicKeySet,
     msg_queue: BTreeMap<PeerId, Vec<QueueEntry>>,
     consensus_mode: ConsensusMode,
 }
@@ -75,34 +78,57 @@ pub enum ConsensusError {
     },
 }
 
+fn peers_from_ids<R: Rng>(
+    ids: &BTreeSet<PeerId>,
+    consensus_mode: ConsensusMode,
+    rng: &mut R,
+) -> (BTreeMap<PeerId, Peer>, PublicKeySet) {
+    let sks = SecretKeySet::random(ids.len() / 3, rng);
+    (
+        ids.iter()
+            .enumerate()
+            .map(|(index, id)| {
+                let coin = CommonCoin::new(
+                    ids.clone(),
+                    sks.public_keys(),
+                    Some(sks.secret_key_share(index)),
+                );
+                (
+                    id.clone(),
+                    Peer::from_genesis(id.clone(), &ids, consensus_mode, coin),
+                )
+            })
+            .collect(),
+        sks.public_keys(),
+    )
+}
+
 impl Network {
     /// Create an empty test network
     pub fn new(consensus_mode: ConsensusMode) -> Self {
+        // a dummy SecretKeySet to put a value in genesis_coin_keys - will be replaced anyway when
+        // the network processes the Genesis event
+        let sks = SecretKeySet::random(1, &mut thread_rng());
         Network {
             peers: BTreeMap::new(),
             genesis: BTreeSet::new(),
+            genesis_coin_keys: sks.public_keys(),
             msg_queue: BTreeMap::new(),
             consensus_mode,
         }
     }
 
     /// Create a test network with initial peers constructed from the given IDs
-    pub fn with_peers<I: IntoIterator<Item = PeerId>>(
+    pub fn with_peers<I: IntoIterator<Item = PeerId>, R: Rng>(
         all_ids: I,
         consensus_mode: ConsensusMode,
+        rng: &mut R,
     ) -> Self {
         let genesis_group = all_ids.into_iter().collect::<BTreeSet<_>>();
-        let peers = genesis_group
-            .iter()
-            .map(|id| {
-                (
-                    id.clone(),
-                    Peer::from_genesis(id.clone(), &genesis_group, consensus_mode),
-                )
-            })
-            .collect();
+        let (peers, genesis_coin_keys) = peers_from_ids(&genesis_group, consensus_mode, rng);
         Network {
             genesis: genesis_group,
+            genesis_coin_keys,
             peers,
             msg_queue: BTreeMap::new(),
             consensus_mode,
@@ -122,9 +148,12 @@ impl Network {
             let id = parsed_contents.our_id.clone();
             let _ = peers.insert(id, Peer::from_parsed_contents(parsed_contents));
         }
+        // TODO: get the coin from graphs
+        let sks = SecretKeySet::random(peers.len() / 3, &mut thread_rng());
         Network {
             peers,
             genesis,
+            genesis_coin_keys: sks.public_keys(),
             msg_queue: BTreeMap::new(),
             consensus_mode,
         }
@@ -383,6 +412,8 @@ impl Network {
 
         let consensus_mode = if block.payload().is_opaque() {
             self.consensus_mode
+        } else if let ParsecObservation::DkgMessage(_) = block.payload() {
+            ConsensusMode::Single
         } else {
             ConsensusMode::Supermajority
         };
@@ -496,25 +527,20 @@ impl Network {
                     // if the peers are already initialised, we won't initialise them again
                     return Ok(true);
                 }
-                let peers = genesis_group
-                    .iter()
-                    .map(|id| {
-                        (
-                            id.clone(),
-                            Peer::from_genesis(id.clone(), &genesis_group, self.consensus_mode),
-                        )
-                    })
-                    .collect();
+                let (peers, public_keys) = peers_from_ids(&genesis_group, self.consensus_mode, rng);
                 for node in &genesis_group {
                     peer_removal_guard.add_genesis_peer(node.clone());
                 }
                 self.peers = peers;
                 self.genesis = genesis_group;
+                self.genesis_coin_keys = public_keys;
                 // do a full reset while we're at it
                 self.msg_queue.clear();
             }
             ScheduleEvent::AddPeer(peer) => {
                 let current_peers = self.active_peers().map(|peer| peer.id.clone()).collect();
+                let coin =
+                    CommonCoin::new(self.genesis.clone(), self.genesis_coin_keys.clone(), None);
                 let _ = self.peers.insert(
                     peer.clone(),
                     Peer::from_existing(
@@ -522,6 +548,7 @@ impl Network {
                         &self.genesis,
                         &current_peers,
                         self.consensus_mode,
+                        coin,
                     ),
                 );
 

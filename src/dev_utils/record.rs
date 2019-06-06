@@ -7,14 +7,17 @@
 // permissions and limitations relating to use of the SAFE Network Software.
 
 use super::dot_parser::{parse_dot_file, ParsedContents};
+use crate::common_coin::CommonCoin;
 use crate::gossip::{Event, Request, Response};
 use crate::mock::{PeerId, Transaction};
 use crate::observation::{ConsensusMode, Observation, ObservationStore};
 use crate::parsec::Parsec;
 use crate::peer_list::PeerIndex;
+use rand::thread_rng;
 use std::collections::BTreeSet;
 use std::io;
 use std::path::Path;
+use threshold_crypto::SecretKeySet;
 
 /// Record of a Parsec session which consist of sequence of operations (`vote_for`, `handle_request`
 /// and `handle_response`). Can be produced from a previously dumped DOT file and after replaying,
@@ -33,10 +36,14 @@ impl Record {
     }
 
     pub fn play(self) -> Parsec<Transaction, PeerId> {
+        // TODO: get the coin from parsed contents
+        let sks = SecretKeySet::random(self.genesis_group.len() / 3, &mut thread_rng());
+        let cc = CommonCoin::new(self.genesis_group.clone(), sks.public_keys(), None);
         let mut parsec = Parsec::from_genesis(
             self.our_id,
             &self.genesis_group,
             ConsensusMode::Supermajority,
+            cc,
         );
 
         for action in self.actions {

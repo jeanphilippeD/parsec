@@ -6,6 +6,7 @@
 // KIND, either express or implied. Please review the Licences for the specific language governing
 // permissions and limitations relating to use of the SAFE Network Software.
 
+use crate::common_coin::CommonCoin;
 use crate::gossip::{CauseInput, Event, EventIndex, Graph, IndexedEventRef};
 #[cfg(any(
     all(test, feature = "malice-detection", feature = "mock"),
@@ -26,6 +27,7 @@ use crate::observation::{
 };
 use crate::peer_list::{PeerIndexMap, PeerIndexSet, PeerList, PeerState};
 use crate::round_hash::RoundHash;
+use maidsafe_utilities::serialisation::deserialise;
 use pom::char_class::{alphanum, digit, hex_digit, multispace, space};
 use pom::parser::*;
 use pom::Result as PomResult;
@@ -66,15 +68,23 @@ fn comment_prefix() -> Parser<u8, ()> {
 struct ParsedFile {
     our_id: PeerId,
     peer_list: ParsedPeerList,
+    common_coin: CommonCoin<PeerId>,
     graph: ParsedGraph,
     meta_election: ParsedMetaElection,
 }
 
 fn parse_file() -> Parser<u8, ParsedFile> {
-    (parse_our_id() + parse_peer_list() + parse_graph() + parse_meta_election() - parse_end()).map(
-        |(((our_id, peer_list), graph), meta_election)| ParsedFile {
+    (parse_our_id()
+        + parse_peer_list()
+        + parse_common_coin()
+        + parse_graph()
+        + parse_meta_election()
+        - parse_end())
+    .map(
+        |((((our_id, peer_list), common_coin), graph), meta_election)| ParsedFile {
             our_id,
             peer_list,
+            common_coin,
             graph,
             meta_election,
         },
@@ -125,6 +135,22 @@ fn parse_single_state() -> Parser<u8, PeerState> {
 
 fn parse_peers() -> Parser<u8, BTreeSet<PeerId>> {
     (sym(b'{') * list(parse_peer_id(), seq(b", ")) - sym(b'}')).map(|v| v.into_iter().collect())
+}
+
+fn parse_common_coin() -> Parser<u8, CommonCoin<PeerId>> {
+    (comment_prefix() * seq(b"common_coin: ") * parse_vecu8() - next_line())
+        .map(|bytes| deserialise(&bytes).unwrap())
+}
+
+fn parse_vecu8() -> Parser<u8, Vec<u8>> {
+    seq(b"[") * list(parse_u8(), seq(b", ")) - seq(b"]")
+}
+
+fn parse_u8() -> Parser<u8, u8> {
+    is_a(digit)
+        .repeat(1..)
+        .convert(String::from_utf8)
+        .convert(|s| u8::from_str(&s))
 }
 
 #[derive(Debug)]
@@ -632,12 +658,13 @@ pub(crate) struct ParsedContents {
     pub graph: Graph<PeerId>,
     pub meta_election: MetaElection,
     pub peer_list: PeerList<PeerId>,
+    pub common_coin: CommonCoin<PeerId>,
     pub observations: ObservationStore<Transaction, PeerId>,
 }
 
 impl ParsedContents {
     /// Create empty `ParsedContents`.
-    pub fn new(our_id: PeerId) -> Self {
+    pub fn new(our_id: PeerId, common_coin: CommonCoin<PeerId>) -> Self {
         let peer_list = PeerList::new(our_id.clone());
         let meta_election = MetaElection::new(PeerIndexSet::default());
 
@@ -646,6 +673,7 @@ impl ParsedContents {
             graph: Graph::new(),
             meta_election,
             peer_list,
+            common_coin,
             observations: ObservationStore::new(),
         }
     }
@@ -754,11 +782,12 @@ fn convert_into_parsed_contents(result: ParsedFile) -> ParsedContents {
     let ParsedFile {
         our_id,
         peer_list,
+        common_coin,
         mut graph,
         meta_election,
     } = result;
 
-    let mut parsed_contents = ParsedContents::new(our_id.clone());
+    let mut parsed_contents = ParsedContents::new(our_id.clone(), common_coin);
 
     let peer_data = peer_list.0.into_iter().collect();
     let peer_list_builder = PeerList::build_from_dot_input(our_id, peer_data);

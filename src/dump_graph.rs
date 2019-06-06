@@ -6,6 +6,7 @@
 // KIND, either express or implied. Please review the Licences for the specific language governing
 // permissions and limitations relating to use of the SAFE Network Software.
 
+use crate::common_coin::CommonCoin;
 use crate::gossip::Graph;
 use crate::id::SecretId;
 use crate::meta_voting::MetaElection;
@@ -34,6 +35,7 @@ pub(crate) fn to_file<T: NetworkEvent, S: SecretId>(
     gossip_graph: &Graph<S::PublicId>,
     meta_election: &MetaElection,
     peer_list: &PeerList<S>,
+    common_coin: &CommonCoin<S::PublicId>,
     observations: &ObservationStore<T, S::PublicId>,
 ) {
     detail::to_file(
@@ -41,6 +43,7 @@ pub(crate) fn to_file<T: NetworkEvent, S: SecretId>(
         gossip_graph,
         meta_election,
         peer_list,
+        common_coin,
         observations,
     )
 }
@@ -50,6 +53,7 @@ pub(crate) fn to_file<T: NetworkEvent, S: SecretId>(
     _: &Graph<S::PublicId>,
     _: &MetaElection,
     _: &PeerList<S>,
+    _: &CommonCoin<S::PublicId>,
     _: &ObservationStore<T, S::PublicId>,
 ) {
 }
@@ -59,6 +63,7 @@ pub use self::detail::DIR;
 
 #[cfg(feature = "dump-graphs")]
 mod detail {
+    use crate::common_coin::CommonCoin;
     use crate::gossip::{Event, EventHash, EventIndex, Graph, GraphSnapshot, IndexedEventRef};
     use crate::id::{PublicId, SecretId};
     use crate::meta_voting::{MetaElection, MetaElectionSnapshot, MetaEvent, MetaVote};
@@ -142,6 +147,7 @@ mod detail {
         gossip_graph: &Graph<S::PublicId>,
         meta_election: &MetaElection,
         peer_list: &PeerList<S>,
+        common_coin: &CommonCoin<S::PublicId>,
         observations: &ObservationStore<T, S::PublicId>,
     ) {
         let id = format!("{:?}", owner_id);
@@ -159,6 +165,7 @@ mod detail {
             gossip_graph,
             meta_election,
             peer_list,
+            common_coin,
             observations,
         ) {
             Ok(mut dot_writer) => {
@@ -304,6 +311,7 @@ mod detail {
         gossip_graph: &'a Graph<S::PublicId>,
         meta_election: &'a MetaElection,
         peer_list: &'a PeerList<S>,
+        common_coin: &'a CommonCoin<S::PublicId>,
         observations: &'a ObservationStore<T, S::PublicId>,
         indent: usize,
     }
@@ -316,6 +324,7 @@ mod detail {
             gossip_graph: &'a Graph<S::PublicId>,
             meta_election: &'a MetaElection,
             peer_list: &'a PeerList<S>,
+            common_coin: &'a CommonCoin<S::PublicId>,
             observations: &'a ObservationStore<T, S::PublicId>,
         ) -> io::Result<Self> {
             File::create(&file_path).map(|file| DotWriter {
@@ -323,6 +332,7 @@ mod detail {
                 gossip_graph,
                 meta_election,
                 peer_list,
+                common_coin,
                 observations,
                 indent: 0,
             })
@@ -398,7 +408,13 @@ mod detail {
             }
             self.dedent();
             let indent = self.indentation();
-            self.writeln(format_args!("{}{}}}", Self::COMMENT, indent))
+            self.writeln(format_args!("{}{}}}", Self::COMMENT, indent))?;
+            self.writeln(format_args!(
+                "{}{}common_coin: {:?}",
+                Self::COMMENT,
+                indent,
+                serialise(self.common_coin)
+            ))
         }
 
         fn calculate_positions(&self) -> BTreeMap<EventHash, usize> {

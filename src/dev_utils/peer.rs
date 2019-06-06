@@ -10,6 +10,7 @@ use super::Observation;
 #[cfg(feature = "testing")]
 use super::ParsedContents;
 use crate::block::Block;
+use crate::common_coin::CommonCoin;
 use crate::mock::{PeerId, Transaction};
 use crate::observation::{ConsensusMode, Malice, Observation as ParsecObservation};
 use crate::parsec::Parsec;
@@ -39,10 +40,11 @@ impl Peer {
         id: PeerId,
         genesis_group: &BTreeSet<PeerId>,
         consensus_mode: ConsensusMode,
+        common_coin: CommonCoin<PeerId>,
     ) -> Self {
         Self {
             id: id.clone(),
-            parsec: Parsec::from_genesis(id, genesis_group, consensus_mode),
+            parsec: Parsec::from_genesis(id, genesis_group, consensus_mode, common_coin),
             blocks: vec![],
             status: PeerStatus::Active,
             votes_to_make: vec![],
@@ -54,10 +56,17 @@ impl Peer {
         genesis_group: &BTreeSet<PeerId>,
         current_group: &BTreeSet<PeerId>,
         consensus_mode: ConsensusMode,
+        common_coin: CommonCoin<PeerId>,
     ) -> Self {
         Self {
             id: id.clone(),
-            parsec: Parsec::from_existing(id, genesis_group, current_group, consensus_mode),
+            parsec: Parsec::from_existing(
+                id,
+                genesis_group,
+                current_group,
+                consensus_mode,
+                common_coin,
+            ),
             blocks: vec![],
             status: PeerStatus::Pending,
             votes_to_make: vec![],
@@ -116,7 +125,14 @@ impl Peer {
 
     /// Returns the payloads of `self.blocks` in the order in which they were returned by `poll()`.
     pub fn blocks_payloads(&self) -> Vec<&Observation> {
-        self.blocks.iter().map(Block::payload).collect()
+        self.blocks
+            .iter()
+            .map(Block::payload)
+            .filter(|obs| match obs {
+                ParsecObservation::DkgMessage(_) => false,
+                _ => true,
+            })
+            .collect()
     }
 
     /// Returns iterator over all accusations raised by this peer that haven't been retrieved by

@@ -229,6 +229,10 @@ impl Cause<VoteKey<PeerId>, EventIndex> {
                     self_parent,
                 }
             }
+            Cause::CoinShares { shares, .. } => Cause::CoinShares {
+                self_parent,
+                shares,
+            },
         }
     }
 }
@@ -257,6 +261,7 @@ impl<'a, 'b, T: NetworkEvent, P: PublicId> Display for CauseDisplay<'a, 'b, T, P
                 }
             }
             Cause::Initial => write!(f, "Initial"),
+            Cause::CoinShares { .. } => write!(f, "CoinShares"),
         }
     }
 }

@@ -775,6 +775,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
             &self.graph,
             &self.meta_election,
             &self.peer_list,
+            &self.common_coin,
             &self.observations,
         );
 
@@ -2453,6 +2454,7 @@ impl<T: NetworkEvent, S: SecretId> Drop for Parsec<T, S> {
                 &self.graph,
                 &self.meta_election,
                 &self.peer_list,
+                &self.common_coin,
                 &self.observations,
             );
         }
@@ -2488,6 +2490,7 @@ impl Parsec<Transaction, PeerId> {
             peer_list,
             PeerIndexSet::default(),
             ConsensusMode::Supermajority,
+            parsed_contents.common_coin,
         );
 
         for event in &parsed_contents.graph {
