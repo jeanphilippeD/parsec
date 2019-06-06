@@ -13,24 +13,27 @@ version = "0.5.0"
 
 [dependencies]
 fnv = "~1.0.6"
-lazy_static = "~1.0.1"
+lazy_static = "~1.2.0"
 log = "~0.3.8"
 maidsafe_utilities = { version = "~0.17.0", git = "https://github.com/fizyk20/maidsafe_utilities", branch = "rand0.6" }
 pom = { version = "~1.1.0", optional = true }
 proptest = { version = "~0.8.6", optional = true }
 rand = "~0.6.4"
 rand_xorshift = "~0.1"
-safe_crypto = { version = "~0.4.0", optional = true }
+safe_crypto = { version = "~0.5.0", optional = true, git = "https://github.com/pierrechevalier83/safe_crypto", branch = "master" }
 serde = "~1.0.66"
 serde_derive = "~1.0.66"
 tiny-keccak = "~1.4.2"
 unwrap = "~1.2.0"
+threshold_crypto = { version = "~0.3.0", git = "https://github.com/poanetwork/threshold_crypto", branch = "master" }
+bincode = "~1.0.1"
+failure = "~0.1.5"
 
 [dev-dependencies]
 clap = "~2.31.2"
 criterion = "~0.2.5"
 pom = "~1.1.0"
-safe_crypto = "~0.4.0"
+safe_crypto = { version = "~0.5.0", git = "https://github.com/pierrechevalier83/safe_crypto", branch = "master" }
 
 [features]
 dump-graphs = []

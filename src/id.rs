@@ -6,6 +6,7 @@
 // KIND, either express or implied. Please review the Licences for the specific language governing
 // permissions and limitations relating to use of the SAFE Network Software.
 
+use rand::Rng;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::fmt::Debug;
@@ -18,6 +19,10 @@ pub trait PublicId: Clone + Eq + Ord + Hash + Serialize + DeserializeOwned + Deb
     type Signature: Clone + Eq + Ord + Hash + Serialize + DeserializeOwned + Debug;
     /// Verifies `signature` against `data` using this `PublicId`.  Returns `true` if valid.
     fn verify_signature(&self, signature: &Self::Signature, data: &[u8]) -> bool;
+
+    /// Encrypts the message using the OS random number generator.
+    /// TODO: this is currently borrowed from threshold_crypto. We will have to sort this out
+    fn encrypt_with_rng<R: Rng, M: AsRef<[u8]>>(&self, rng: &mut R, msg: M) -> Vec<u8>;
 }
 
 /// The secret identity of a node.  It provides functionality to allow it to be used as an
@@ -39,6 +44,8 @@ pub trait SecretId {
             signature: self.sign_detached(data),
         }
     }
+    /// TODO: this is currently borrowed from threshold_crypto. We will have to sort this out
+    fn decrypt(&self, ct: &[u8]) -> Option<Vec<u8>>;
 }
 
 /// A basic helper to carry a given [`Signature`](trait.PublicId.html#associatedtype.Signature)

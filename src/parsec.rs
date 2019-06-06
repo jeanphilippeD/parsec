@@ -35,6 +35,8 @@ use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::usize;
 
+pub(crate) type BlockNumber = usize;
+
 /// The main object which manages creating and receiving gossip about network events from peers, and
 /// which provides a sequence of consensused [Block](struct.Block.html)s by applying the PARSEC
 /// algorithm. A `Block`'s payload, described by the [Observation](enum.Observation.html) type, is
