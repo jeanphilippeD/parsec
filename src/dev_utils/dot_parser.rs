@@ -307,8 +307,11 @@ fn parse_cause() -> Parser<u8, CauseInput> {
     let response = seq(b"Response").map(|_| CauseInput::Response);
     let observation =
         (seq(b"Observation(") * parse_observation() - sym(b')')).map(CauseInput::Observation);
+    let shares = (seq(b"CoinShares(") * parse_vecu8() - sym(b')'))
+        .convert(|data| deserialise(&data))
+        .map(CauseInput::CoinShares);
 
-    prefix * (initial | request | response | observation) - newline()
+    prefix * (initial | request | response | observation | shares) - newline()
 }
 
 fn parse_last_ancestors() -> Parser<u8, BTreeMap<PeerId, usize>> {

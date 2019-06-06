@@ -519,6 +519,7 @@ pub(crate) enum CauseInput {
     Request,
     Response,
     Observation(Observation<Transaction, PeerId>),
+    CoinShares(BTreeMap<RoundHash, SignatureShare>),
 }
 
 // Properties of `Event` that can be computed from its `Content`.

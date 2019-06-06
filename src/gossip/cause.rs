@@ -26,6 +26,8 @@ use crate::observation::ObservationStore;
 use crate::peer_list::PeerIndex;
 use crate::round_hash::RoundHash;
 use crate::vote::{Vote, VoteKey};
+#[cfg(feature = "dump-graphs")]
+use maidsafe_utilities::serialisation::serialise;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 #[cfg(feature = "dump-graphs")]
@@ -191,6 +193,10 @@ impl Cause<Vote<Transaction, PeerId>, EventHash> {
                 self_parent,
                 vote: Vote::new(creator_id, observation),
             },
+            CauseInput::CoinShares(shares) => Cause::CoinShares {
+                self_parent,
+                shares,
+            },
         }
     }
 }
@@ -261,7 +267,9 @@ impl<'a, 'b, T: NetworkEvent, P: PublicId> Display for CauseDisplay<'a, 'b, T, P
                 }
             }
             Cause::Initial => write!(f, "Initial"),
-            Cause::CoinShares { .. } => write!(f, "CoinShares"),
+            Cause::CoinShares { shares, .. } => {
+                write!(f, "CoinShares({:?})", unwrap!(serialise(shares)))
+            }
         }
     }
 }
