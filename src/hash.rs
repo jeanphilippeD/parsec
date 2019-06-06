@@ -7,6 +7,7 @@
 // permissions and limitations relating to use of the SAFE Network Software.
 
 use std::cmp::Ordering;
+use std::convert::AsRef;
 use std::fmt::{self, Debug, Formatter};
 use tiny_keccak;
 
@@ -39,6 +40,12 @@ impl Hash {
 impl<'a> From<&'a [u8]> for Hash {
     fn from(src: &'a [u8]) -> Self {
         Hash(tiny_keccak::sha3_256(src))
+    }
+}
+
+impl AsRef<[u8]> for Hash {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
     }
 }
 
