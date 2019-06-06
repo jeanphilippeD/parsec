@@ -9,6 +9,7 @@
 use crate::gossip::{EventHash, PackedEvent};
 use crate::hash::Hash;
 use crate::id::PublicId;
+use crate::key_gen::{message::DkgMessage, AckFault, PartFault};
 use crate::network_event::NetworkEvent;
 use crate::peer_list::PeerIndex;
 use crate::serialise;
@@ -45,6 +46,9 @@ pub enum Observation<T: NetworkEvent, P: PublicId> {
         /// Type of the malice committed.
         malice: Malice<T, P>,
     },
+    /// Vote for the next message (Part or Ack) to be handled for the Distributed Key Generation
+    /// algorithm used by our common coin.
+    DkgMessage(DkgMessage),
     /// Vote for an event which is opaque to Parsec.
     OpaquePayload(T),
 }
@@ -55,6 +59,13 @@ impl<T: NetworkEvent, P: PublicId> Observation<T, P> {
             true
         } else {
             false
+        }
+    }
+
+    pub(crate) fn is_dkg(&self) -> bool {
+        match *self {
+            Observation::DkgMessage(_) => true,
+            _ => false,
         }
     }
 }
@@ -68,6 +79,7 @@ impl<T: NetworkEvent, P: PublicId> Debug for Observation<T, P> {
             Observation::Accusation { offender, malice } => {
                 write!(formatter, "Accusation {{ {:?}, {:?} }}", offender, malice)
             }
+            Observation::DkgMessage(msg) => write!(formatter, "{:?}", msg),
             #[cfg(not(feature = "dump-graphs"))]
             Observation::OpaquePayload(payload) => {
                 write!(formatter, "OpaquePayload({:?})", payload)
@@ -117,7 +129,12 @@ pub enum Malice<T: NetworkEvent, P: PublicId> {
     Unprovable(UnprovableMalice),
     /// A node is not reporting malice when it should
     Accomplice(EventHash, Box<Malice<T, P>>),
-    // TODO: add other malice variants
+    /// An invalid DKG Part message; the hash is of the event containing the observation with the
+    /// offending DkgMessage
+    InvalidDkgPart(EventHash, PartFault),
+    /// An invalid DKG Ack message; the hash is of the event containing the observation with the
+    /// offending DkgMessage
+    InvalidDkgAck(EventHash, AckFault),
 }
 
 impl<T: NetworkEvent, P: PublicId> Malice<T, P> {
@@ -295,6 +312,8 @@ impl ConsensusMode {
     pub(crate) fn of<T: NetworkEvent, P: PublicId>(self, observation: &Observation<T, P>) -> Self {
         if observation.is_opaque() {
             self
+        } else if observation.is_dkg() {
+            ConsensusMode::Single
         } else {
             ConsensusMode::Supermajority
         }

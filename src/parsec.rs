@@ -18,6 +18,7 @@ use crate::gossip::{
     Request, Response, UnpackedEvent,
 };
 use crate::id::{PublicId, SecretId};
+use crate::key_gen::{message::DkgMessage, Ack, AckOutcome, KeyGen, Part, PartOutcome};
 use crate::meta_voting::{MetaElection, MetaEvent, MetaEventBuilder, MetaVote, Step};
 #[cfg(any(feature = "testing", all(test, feature = "mock")))]
 use crate::mock::{PeerId, Transaction};
@@ -29,6 +30,7 @@ use crate::observation::{
     ObservationStore,
 };
 use crate::peer_list::{PeerIndex, PeerIndexSet, PeerList, PeerState};
+use rand::rngs::OsRng;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::mem;
 #[cfg(all(test, feature = "mock"))]
@@ -78,6 +80,12 @@ pub(crate) type BlockNumber = usize;
 pub struct Parsec<T: NetworkEvent, S: SecretId> {
     // The PeerInfo of other nodes.
     peer_list: PeerList<S>,
+    // The historical index of the first block in consensused_blocks
+    first_consensused_block_number: BlockNumber,
+    // the next block to be applied when keygen finishes
+    next_block_number: BlockNumber,
+    // A distributed key generation based common coin mechanism.
+    key_gen: BTreeMap<BlockNumber, KeyGen<S>>,
     // The Gossip graph.
     graph: Graph<S::PublicId>,
     // Information about observations stored in the graph, mapped to their hashes.
@@ -89,9 +97,13 @@ pub struct Parsec<T: NetworkEvent, S: SecretId> {
     consensus_mode: ConsensusMode,
     // Accusations to raise at the end of the processing of current gossip message.
     pending_accusations: Accusations<T, S::PublicId>,
+    pending_dkg_msgs: Vec<DkgMessage>,
+    // map of DkgMessage -> Observation containing it
+    dkg_msg_map: BTreeMap<DkgMessage, EventIndex>,
     // Peers we accused of unprovable malice.
     #[cfg(feature = "malice-detection")]
     unprovable_offenders: PeerIndexSet,
+    rng: OsRng,
 }
 
 impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
@@ -236,16 +248,24 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
     ) -> Self {
         dump_graph::init();
 
+        let rng = OsRng::new().expect("Could not open OS random number generator.");
+
         Self {
             peer_list,
+            first_consensused_block_number: 0,
+            next_block_number: 0,
+            key_gen: BTreeMap::new(),
             graph: Graph::new(),
             consensused_blocks: VecDeque::new(),
             observations: BTreeMap::new(),
             meta_election: MetaElection::new(genesis_group),
             consensus_mode,
             pending_accusations: vec![],
+            pending_dkg_msgs: vec![],
+            dkg_msg_map: BTreeMap::new(),
             #[cfg(feature = "malice-detection")]
             unprovable_offenders: PeerIndexSet::default(),
+            rng,
         }
     }
 
@@ -347,6 +367,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
         let forking_peers = self.unpack_and_add_events(src_index, req.packed_events)?;
         self.create_sync_event(src_index, true, &forking_peers, other_parent)?;
         self.create_accusation_events()?;
+        self.create_dkg_events()?;
 
         let events = self.events_to_gossip_to_peer(src_index)?;
         self.pack_events(events).map(Response::new)
@@ -371,7 +392,8 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
 
         let forking_peers = self.unpack_and_add_events(src_index, resp.packed_events)?;
         self.create_sync_event(src_index, false, &forking_peers, other_parent)?;
-        self.create_accusation_events()
+        self.create_accusation_events()?;
+        self.create_dkg_events()
     }
 
     /// Returns the next stable block, if any. The method might need to be called more than once
@@ -382,7 +404,12 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
     /// `Observation::Remove(our_id)` has been made stable), then no further blocks will be
     /// enqueued. So, once `poll()` returns such a block, it will continue to return `None` forever.
     pub fn poll(&mut self) -> Option<Block<T, S::PublicId>> {
-        self.consensused_blocks.pop_front()
+        if self.first_consensused_block_number < self.next_block_number {
+            self.first_consensused_block_number += 1;
+            self.consensused_blocks.pop_front()
+        } else {
+            None
+        }
     }
 
     /// Check if the owning peer can vote (that is, it has reached a consensus on itself being a
@@ -649,6 +676,19 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
             return Ok(event_index);
         }
 
+        // Cache the index for DkgMessages
+        // Do it before process_events so that the cached indices are already available
+        if let Some(Observation::DkgMessage(ref msg)) = self
+            .graph
+            .get(event_index)
+            .map(|idxref| idxref.inner())
+            .and_then(|ev| ev.payload_key())
+            .and_then(|key| self.observations.get(key))
+            .map(|info| &info.observation)
+        {
+            let _ = self.dkg_msg_map.insert(msg.clone(), event_index);
+        }
+
         self.process_events(event_index.topological_index())?;
 
         if !our {
@@ -696,7 +736,10 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
             }
 
             self.mark_observation_as_consensused(&payload_key);
-            self.handle_consensus(&payload_key);
+
+            let block_index =
+                self.consensused_blocks.len() - 1 + self.first_consensused_block_number;
+            self.handle_consensus(&payload_key, block_index)?;
 
             // Calculate new unconsensused events here, because `MetaElections` doesn't have access
             // to the actual payloads, so can't tell which ones are consensused.
@@ -752,14 +795,19 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
     }
 
     /// Handles consensus reached by us.
-    fn handle_consensus(&mut self, payload_key: &ObservationKey) {
+    fn handle_consensus(
+        &mut self,
+        payload_key: &ObservationKey,
+        block_index: BlockNumber,
+    ) -> Result<()> {
         match self
             .observations
             .get(payload_key)
             .map(|info| info.observation.clone())
         {
-            Some(Observation::Add { ref peer_id, .. }) => self.handle_add_peer(peer_id),
-            Some(Observation::Remove { ref peer_id, .. }) => self.handle_remove_peer(peer_id),
+            Some(Observation::Add { .. }) | Some(Observation::Remove { .. }) => {
+                self.handle_mutation_consensus(block_index)?;
+            }
             Some(Observation::Accusation {
                 ref offender,
                 ref malice,
@@ -771,16 +819,214 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
                     malice
                 );
 
-                self.handle_remove_peer(offender)
+                self.handle_mutation_consensus(block_index)?;
             }
+            Some(Observation::DkgMessage(msg)) => {
+                let dkg_result = self.handle_dkg_message(msg);
+                if let Err(err) = dkg_result {
+                    log_or_panic!("Failed to handle DKG message: {}", err);
+                    return Err(err);
+                }
+            }
+
             Some(Observation::Genesis(_)) | Some(Observation::OpaquePayload(_)) => (),
             None => {
                 log_or_panic!("Failed to get observation from hash.");
             }
+        };
+        self.move_next_block_number();
+        Ok(())
+    }
+
+    fn move_next_block_number(&mut self) {
+        self.next_block_number =
+            self.key_gen.keys().next().cloned().unwrap_or_else(|| {
+                self.consensused_blocks.len() + self.first_consensused_block_number
+            });
+    }
+
+    fn get_dkg_msg_event(&self, msg: &DkgMessage) -> Option<&Event<S::PublicId>> {
+        self.dkg_msg_map
+            .get(&msg)
+            .and_then(|idx| self.graph.get(*idx))
+            .map(|idxref| idxref.inner())
+    }
+
+    fn handle_dkg_message(&mut self, msg: DkgMessage) -> Result<()> {
+        let creator_id = self
+            .get_dkg_msg_event(&msg)
+            .map(|ev| ev.creator())
+            .and_then(|peer_idx| self.peer_list.get(peer_idx))
+            .map(|peer| peer.id())
+            .ok_or(Error::DkgCacheMiss)?
+            .clone();
+        match msg {
+            DkgMessage::Part { block_number, part } => {
+                self.handle_dkg_message_part(&creator_id, block_number, part)
+            }
+            DkgMessage::Ack { block_number, ack } => {
+                self.handle_dkg_message_ack(&creator_id, block_number, ack)
+            }
         }
     }
 
-    fn handle_add_peer(&mut self, peer_id: &S::PublicId) {
+    fn handle_dkg_message_part(
+        &mut self,
+        creator_id: &S::PublicId,
+        block_number: BlockNumber,
+        part: Part,
+    ) -> Result<()> {
+        if block_number < self.next_block_number {
+            return Ok(());
+        }
+        // TODO: accuse of malice if we don't have the right key_gen?
+        let key_gen = &mut self.key_gen.get_mut(&block_number).unwrap();
+        let part_result = key_gen.handle_part(
+            &self.peer_list.our_id(),
+            creator_id,
+            part.clone(),
+            &mut self.rng,
+        )?;
+
+        match part_result {
+            PartOutcome::Valid(Some(ack)) => {
+                self.add_dkg_msg_to_queue(DkgMessage::Ack { block_number, ack });
+            }
+            PartOutcome::Valid(None) => (),
+            PartOutcome::Invalid(fault) => {
+                warn!("An invalid Part was detected from {:?}", creator_id);
+                let event_hash = self
+                    .get_dkg_msg_event(&DkgMessage::Part { block_number, part })
+                    .ok_or(Error::DkgCacheMiss)?
+                    .hash();
+                let creator_idx = self
+                    .peer_list
+                    .get_index(creator_id)
+                    .ok_or(Error::UnknownPeer)?;
+                let accusation = (creator_idx, Malice::InvalidDkgPart(*event_hash, fault));
+                self.pending_accusations.push(accusation);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn handle_dkg_message_ack(
+        &mut self,
+        creator_id: &S::PublicId,
+        block_number: BlockNumber,
+        ack: Ack,
+    ) -> Result<()> {
+        if block_number < self.next_block_number {
+            return Ok(());
+        }
+        // TODO: accuse of malice if we don't have the right key_gen?
+        let key_gen = &mut self.key_gen.get_mut(&block_number).unwrap();
+        let ack_result = key_gen.handle_ack(&self.peer_list.our_id(), creator_id, ack.clone())?;
+        match ack_result {
+            AckOutcome::Valid => {
+                if key_gen.is_ready() {
+                    trace!(
+                        "{:?}: key_gen for block number {} is ready.",
+                        self.peer_list.our_pub_id(),
+                        block_number
+                    );
+                    let (_public_key_set, _secret_key_share) = key_gen.generate()?;
+
+                    // Actually handle peer adds and removes
+                    for block in self
+                        .consensused_blocks
+                        .clone() // TODO: optimise this
+                        .iter()
+                        .skip(self.next_block_number - self.first_consensused_block_number)
+                        .take(block_number + 1 - self.next_block_number)
+                    {
+                        trace!(
+                            "{:?}: Acting upon block {:?}",
+                            self.peer_list.our_pub_id(),
+                            block.payload()
+                        );
+                        match block.payload() {
+                            Observation::Add { peer_id, .. } => self.finalise_add_peer(peer_id),
+                            Observation::Remove { peer_id, .. } => {
+                                self.finalise_remove_peer(peer_id)
+                            }
+                            Observation::Accusation { offender, .. } => {
+                                self.finalise_remove_peer(offender)
+                            }
+                            _ => (),
+                        }
+                    }
+
+                    trace!("{:?}: dropping old key_gens", self.peer_list.our_pub_id());
+
+                    // drop old keygens
+                    let key_gens = mem::replace(&mut self.key_gen, BTreeMap::new());
+                    self.key_gen = key_gens
+                        .into_iter()
+                        .filter(|&(bn, _)| bn >= block_number + 1)
+                        .collect();
+
+                    self.move_next_block_number();
+                }
+            }
+            AckOutcome::Invalid(fault) => {
+                warn!("An invalid Ack was detected from {:?}", creator_id);
+                let event_hash = self
+                    .get_dkg_msg_event(&DkgMessage::Ack { block_number, ack })
+                    .ok_or(Error::DkgCacheMiss)?
+                    .hash();
+                let creator_idx = self
+                    .peer_list
+                    .get_index(creator_id)
+                    .ok_or(Error::UnknownPeer)?;
+                let accusation = (creator_idx, Malice::InvalidDkgAck(*event_hash, fault));
+                self.pending_accusations.push(accusation);
+            }
+        }
+        Ok(())
+    }
+
+    /// This calculates the set of active voters after a given block is applied
+    fn voters_at_block(&self, block_number: BlockNumber) -> BTreeSet<S::PublicId> {
+        let mut peers: BTreeSet<S::PublicId> = self
+            .peer_list
+            .voters()
+            .map(|(_, p)| p.id().clone())
+            .collect();
+        for block in self
+            .consensused_blocks
+            .iter()
+            .skip(self.next_block_number - self.first_consensused_block_number)
+            .take(block_number + 1 - self.next_block_number)
+        {
+            match block.payload() {
+                Observation::Add { peer_id, .. } => {
+                    let _ = peers.insert(peer_id.clone());
+                }
+                Observation::Remove { peer_id, .. } => {
+                    let _ = peers.remove(peer_id);
+                }
+                Observation::Accusation { offender, .. } => {
+                    let _ = peers.remove(offender);
+                }
+                _ => (),
+            }
+        }
+        peers
+    }
+
+    fn handle_mutation_consensus(&mut self, block_number: BlockNumber) -> Result<()> {
+        let voters = self.voters_at_block(block_number);
+        let (key_gen, part) = KeyGen::from_peer_list(self.our_pub_id(), &voters)?;
+        if let Some(part) = part {
+            self.add_dkg_msg_to_queue(DkgMessage::Part { block_number, part });
+        }
+        let _ = self.key_gen.insert(block_number, key_gen);
+        Ok(())
+    }
+
+    fn finalise_add_peer(&mut self, peer_id: &S::PublicId) {
         // - If we are already full member of the section, we can start sending gossips to
         //   the new peer from this moment.
         // - If we are the new peer, we must wait for the other members to send gossips to
@@ -818,7 +1064,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
         }
     }
 
-    fn handle_remove_peer(&mut self, peer_id: &S::PublicId) {
+    fn finalise_remove_peer(&mut self, peer_id: &S::PublicId) {
         if let Some(peer_index) = self.peer_list.get_index(peer_id) {
             self.peer_list.remove_peer(peer_index);
         }
@@ -1561,6 +1807,27 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
             self.create_accusation_event(offender, malice)?;
         }
 
+        Ok(())
+    }
+
+    fn add_dkg_msg_to_queue(&mut self, msg: DkgMessage) {
+        self.pending_dkg_msgs.push(msg);
+    }
+
+    fn create_dkg_events(&mut self) -> Result<()> {
+        for msg in mem::replace(&mut self.pending_dkg_msgs, vec![]) {
+            self.publish_dkg_msg(msg)?;
+        }
+        Ok(())
+    }
+
+    fn publish_dkg_msg(&mut self, msg: DkgMessage) -> Result<()> {
+        let event = Event::new_from_observation(
+            self.our_last_event_index()?,
+            Observation::DkgMessage(msg),
+            self.event_context_mut(),
+        )?;
+        let _ = self.add_event(event)?;
         Ok(())
     }
 

@@ -6,7 +6,9 @@
 // KIND, either express or implied. Please review the Licences for the specific language governing
 // permissions and limitations relating to use of the SAFE Network Software.
 
+use crate::key_gen::Error as DkgError;
 use crate::peer_list::PeerState;
+use std::convert::From;
 use std::fmt::{self, Display, Formatter};
 use std::result;
 
@@ -52,6 +54,12 @@ pub enum Error {
     InvalidMessage,
     /// Logic error.
     Logic,
+    /// DKG algorithm error
+    DkgError(DkgError),
+    /// We misused the DKG module
+    DkgMisuse,
+    /// Missing DkgMessage in cache
+    DkgCacheMiss,
 }
 
 impl Display for Error {
@@ -98,7 +106,16 @@ impl Display for Error {
                 "This non-empty message doesn't contain an event created by the sender."
             ),
             Error::Logic => write!(f, "This a logic error and represents a flaw in the code."),
+            Error::DkgError(ref err) => write!(f, "DKG Error: {}", err),
+            Error::DkgMisuse => write!(f, "The DKG module has been misused."),
+            Error::DkgCacheMiss => write!(f, "The DKG message cache doesn't contain a message."),
         }
+    }
+}
+
+impl From<DkgError> for Error {
+    fn from(err: DkgError) -> Error {
+        Error::DkgError(err)
     }
 }
 

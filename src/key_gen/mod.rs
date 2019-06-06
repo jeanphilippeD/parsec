@@ -267,6 +267,7 @@ impl<S: SecretId> KeyGen<S> {
         Ok((key_gen, Some(Part(commit, rows))))
     }
 
+    #[allow(unused)]
     /// Returns the map of participating nodes and their public keys.
     pub fn public_keys(&self) -> &BTreeSet<S::PublicId> {
         &self.pub_keys
@@ -335,13 +336,6 @@ impl<S: SecretId> KeyGen<S> {
             .count()
     }
 
-    /// Returns `true` if the part of the given node is complete.
-    pub fn is_node_ready(&self, proposer_id: &S::PublicId) -> bool {
-        self.node_index(proposer_id)
-            .and_then(|proposer_idx| self.parts.get(&proposer_idx))
-            .map_or(false, |part| part.is_complete(self.threshold))
-    }
-
     /// Returns `true` if enough parts are complete to safely generate the new key.
     pub fn is_ready(&self) -> bool {
         self.count_complete() > self.threshold
@@ -374,11 +368,6 @@ impl<S: SecretId> KeyGen<S> {
             None
         };
         Ok((pk_commit.into(), opt_sk))
-    }
-
-    /// Returns the number of nodes participating in the key generation.
-    pub fn num_nodes(&self) -> usize {
-        self.pub_keys.len()
     }
 
     /// Handles a `Part` message, or returns a `PartFault` if it is invalid.
