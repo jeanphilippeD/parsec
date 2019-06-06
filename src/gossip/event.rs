@@ -24,14 +24,15 @@ use crate::mock::{PeerId, Transaction};
 use crate::network_event::NetworkEvent;
 use crate::observation::{Observation, ObservationKey, ObservationStore};
 use crate::peer_list::{PeerIndex, PeerIndexMap, PeerIndexSet, PeerList};
+use crate::round_hash::RoundHash;
 use crate::serialise;
 use crate::vote::{Vote, VoteKey};
 use std::cmp;
-#[cfg(any(test, feature = "testing"))]
 use std::collections::BTreeMap;
 use std::fmt::{self, Debug, Display, Formatter};
 #[cfg(feature = "dump-graphs")]
 use std::io::{self, Write};
+use threshold_crypto::SignatureShare;
 
 pub(crate) struct Event<P: PublicId> {
     content: Content<VoteKey<P>, EventIndex, PeerIndex>,
@@ -123,6 +124,36 @@ impl<P: PublicId> Event<P> {
             cause: Cause::Observation {
                 self_parent: self_parent_hash(ctx.graph, self_parent)?,
                 vote,
+            },
+        };
+        let (hash, signature) = compute_event_hash_and_signature(&content, ctx.peer_list.our_id());
+        let graph = ctx.graph;
+        let peer_list = ctx.peer_list;
+        let content = Content::unpack(content, ctx)?;
+
+        Ok(Self::new(
+            hash,
+            signature,
+            content,
+            graph,
+            peer_list,
+            &PeerIndexSet::default(),
+        ))
+    }
+
+    // Creates a new event with coin shares to be published
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn new_from_coin_shares<T: NetworkEvent, S: SecretId<PublicId = P>>(
+        self_parent: EventIndex,
+        shares: BTreeMap<RoundHash, SignatureShare>,
+        ctx: EventContextMut<T, S>,
+    ) -> Result<Self, Error> {
+        // Compute event hash + signature.
+        let content = Content {
+            creator: ctx.peer_list.our_pub_id().clone(),
+            cause: Cause::CoinShares {
+                self_parent: self_parent_hash(ctx.graph, self_parent)?,
+                shares,
             },
         };
         let (hash, signature) = compute_event_hash_and_signature(&content, ctx.peer_list.our_id());
@@ -265,6 +296,13 @@ impl<P: PublicId> Event<P> {
     pub fn payload_key(&self) -> Option<&ObservationKey> {
         match self.content.cause {
             Cause::Observation { ref vote, .. } => Some(vote.payload_key()),
+            _ => None,
+        }
+    }
+
+    pub fn coin_shares(&self) -> Option<&BTreeMap<RoundHash, SignatureShare>> {
+        match self.content.cause {
+            Cause::CoinShares { ref shares, .. } => Some(shares),
             _ => None,
         }
     }

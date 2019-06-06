@@ -174,7 +174,6 @@ extern crate serde_derive;
 extern crate unwrap;
 
 mod block;
-#[allow(unused)]
 mod common_coin;
 mod dump_graph;
 mod error;

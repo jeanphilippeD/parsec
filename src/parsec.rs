@@ -7,6 +7,7 @@
 // permissions and limitations relating to use of the SAFE Network Software.
 
 use crate::block::Block;
+use crate::common_coin::CommonCoin;
 #[cfg(any(feature = "testing", all(test, feature = "mock")))]
 use crate::dev_utils::ParsedContents;
 use crate::dump_graph;
@@ -86,6 +87,8 @@ pub struct Parsec<T: NetworkEvent, S: SecretId> {
     next_block_number: BlockNumber,
     // A distributed key generation based common coin mechanism.
     key_gen: BTreeMap<BlockNumber, KeyGen<S>>,
+    // Everything needed to flip a common coin as many times as required with a given set of voters
+    common_coin: CommonCoin<S::PublicId>,
     // The Gossip graph.
     graph: Graph<S::PublicId>,
     // Information about observations stored in the graph, mapped to their hashes.
@@ -118,6 +121,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
         our_id: S,
         genesis_group: &BTreeSet<S::PublicId>,
         consensus_mode: ConsensusMode,
+        common_coin: CommonCoin<S::PublicId>,
     ) -> Self {
         if !genesis_group.contains(our_id.public_id()) {
             log_or_panic!("Genesis group must contain us");
@@ -137,7 +141,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
             })
             .collect();
 
-        let mut parsec = Self::empty(peer_list, genesis_indices, consensus_mode);
+        let mut parsec = Self::empty(peer_list, genesis_indices, consensus_mode, common_coin);
         parsec
             .meta_election
             .initialise_round_hashes(parsec.peer_list.all_ids());
@@ -186,6 +190,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
         genesis_group: &BTreeSet<S::PublicId>,
         section: &BTreeSet<S::PublicId>,
         consensus_mode: ConsensusMode,
+        common_coin: CommonCoin<S::PublicId>,
     ) -> Self {
         if genesis_group.is_empty() {
             log_or_panic!("Genesis group can't be empty");
@@ -222,7 +227,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
             let _ = peer_list.add_peer(peer_id.clone(), PeerState::SEND);
         }
 
-        let mut parsec = Self::empty(peer_list, genesis_indices, consensus_mode);
+        let mut parsec = Self::empty(peer_list, genesis_indices, consensus_mode, common_coin);
 
         parsec
             .meta_election
@@ -245,6 +250,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
         peer_list: PeerList<S>,
         genesis_group: PeerIndexSet,
         consensus_mode: ConsensusMode,
+        common_coin: CommonCoin<S::PublicId>,
     ) -> Self {
         dump_graph::init();
 
@@ -255,6 +261,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
             first_consensused_block_number: 0,
             next_block_number: 0,
             key_gen: BTreeMap::new(),
+            common_coin,
             graph: Graph::new(),
             consensused_blocks: VecDeque::new(),
             observations: BTreeMap::new(),
@@ -367,6 +374,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
         let forking_peers = self.unpack_and_add_events(src_index, req.packed_events)?;
         self.create_sync_event(src_index, true, &forking_peers, other_parent)?;
         self.create_accusation_events()?;
+        self.create_coin_shares_event()?;
         self.create_dkg_events()?;
 
         let events = self.events_to_gossip_to_peer(src_index)?;
@@ -393,6 +401,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
         let forking_peers = self.unpack_and_add_events(src_index, resp.packed_events)?;
         self.create_sync_event(src_index, false, &forking_peers, other_parent)?;
         self.create_accusation_events()?;
+        self.create_coin_shares_event()?;
         self.create_dkg_events()
     }
 
@@ -931,7 +940,12 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
                         self.peer_list.our_pub_id(),
                         block_number
                     );
-                    let (_public_key_set, _secret_key_share) = key_gen.generate()?;
+                    let (public_key_set, secret_key_share) = key_gen.generate()?;
+                    self.common_coin = CommonCoin::new(
+                        key_gen.public_keys().clone(),
+                        public_key_set,
+                        secret_key_share,
+                    );
 
                     // Actually handle peer adds and removes
                     for block in self
@@ -1397,102 +1411,37 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
             return Ok(None);
         };
         let round_hash = if let Some(hashes) = self.meta_election.round_hashes(peer_index) {
-            hashes[round].value()
+            hashes[round]
         } else {
             log_or_panic!("{:?} missing round hash.", self.our_pub_id());
             return Err(Error::Logic);
         };
 
-        // Get the gradient of leadership.
-        let mut peer_id_hashes: Vec<_> = self
-            .peer_list
-            .all_id_hashes()
-            .filter(|(peer_index, _)| voters.contains(*peer_index))
-            .collect();
-        peer_id_hashes.sort_by(|lhs, rhs| round_hash.xor_cmp(&lhs.1, &rhs.1));
+        let start_index = self.meta_election.start_index().unwrap_or(0);
+        let shares_with_creators = self
+            .graph
+            .ancestors(event)
+            .take_while(|idxref| idxref.topological_index() >= start_index)
+            .filter_map(|idxref| {
+                idxref
+                    .inner()
+                    .coin_shares()
+                    .and_then(|shares| shares.get(&round_hash))
+                    .and_then(|share| {
+                        self.peer_list
+                            .get(idxref.inner().creator())
+                            .map(|peer| (peer.id().clone(), share.clone()))
+                    })
+            });
 
-        // Try to get the "most-leader"'s aux value.
-        let creator = peer_id_hashes[0].0;
-        if let Some(creator_event_index) = event.last_ancestors().get(creator) {
-            if let Some(aux_value) =
-                self.aux_value(creator, *creator_event_index, peer_index, round)
-            {
-                return Ok(Some(aux_value));
-            }
-        }
-
-        // If we've already waited long enough, get the aux value of the highest ranking leader.
-        if self.stop_waiting(round, event) {
-            for (creator, _) in &peer_id_hashes[1..] {
-                if let Some(creator_event_index) = event.last_ancestors().get(*creator) {
-                    if let Some(aux_value) =
-                        self.aux_value(*creator, *creator_event_index, peer_index, round)
-                    {
-                        return Ok(Some(aux_value));
-                    }
-                }
-            }
-        }
-
-        Ok(None)
-    }
-
-    // Returns the aux value for the given peer, created by `creator`, at the given round and at
-    // the genuine flip step.
-    fn aux_value(
-        &self,
-        creator: PeerIndex,
-        creator_event_index: usize,
-        peer_index: PeerIndex,
-        round: usize,
-    ) -> Option<bool> {
-        self.meta_votes_since_round_and_step(
-            creator,
-            creator_event_index,
-            peer_index,
-            round,
-            Step::GenuineFlip,
-        )
-        .next()
-        .and_then(|meta_vote| meta_vote.aux_value)
-    }
-
-    // Skips back through events created by the peer until passed `responsiveness_threshold`
-    // response events and sees if the peer had its `aux_value` set at this round.  If so, returns
-    // `true`.
-    fn stop_waiting(&self, round: usize, event: IndexedEventRef<S::PublicId>) -> bool {
-        let mut event_index = Some(event.event_index());
-        let mut response_count = 0;
-        let responsiveness_threshold = self.responsiveness_threshold();
-
-        loop {
-            if let Some(event) = event_index.and_then(|index| self.get_known_event(index).ok()) {
-                if event.is_response() {
-                    response_count += 1;
-                    if response_count == responsiveness_threshold {
-                        break;
-                    }
-                }
-                event_index = event.self_parent();
-            } else {
-                return false;
-            }
-        }
-        let event_index = match event_index {
-            Some(index) => index,
-            None => {
-                log_or_panic!("{:?} event_index was None.", self.our_pub_id());
-                return false;
-            }
-        };
-        self.meta_election
-            .meta_votes(event_index)
-            .and_then(|meta_votes| meta_votes.get(event.creator()))
-            .map_or(false, |event_votes| {
-                event_votes
-                    .iter()
-                    .any(|meta_vote| meta_vote.round == round && meta_vote.aux_value.is_some())
+        let valid_shares = shares_with_creators
+            .filter(|(peer_id, share)| {
+                self.common_coin
+                    .verify_share(&round_hash, peer_id.clone(), share)
             })
+            .collect();
+
+        Ok(self.common_coin.get_value(&round_hash, valid_shares))
     }
 
     // Returns the meta votes for the given peer, created by `creator`, since the given round and
@@ -1780,11 +1729,6 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
             .collect())
     }
 
-    // Get the responsiveness threshold based on the current number of peers.
-    fn responsiveness_threshold(&self) -> usize {
-        (self.voter_count() as f64).log2().ceil() as usize
-    }
-
     fn create_accusation_event(
         &mut self,
         offender: PeerIndex,
@@ -1812,6 +1756,76 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
 
     fn add_dkg_msg_to_queue(&mut self, msg: DkgMessage) {
         self.pending_dkg_msgs.push(msg);
+    }
+
+    fn create_coin_shares_event(&mut self) -> Result<()> {
+        let last_sync_event_idxref = if let Some(event) = self
+            .peer_list
+            .our_events()
+            .rev()
+            .filter_map(|ev_idx| self.graph.get(ev_idx))
+            .find(|idxref| idxref.inner().is_request() || idxref.inner().is_response())
+        {
+            event
+        } else {
+            return Ok(());
+        };
+        let last_sync_event_parent = last_sync_event_idxref
+            .inner()
+            .self_parent()
+            .and_then(|idx| self.graph.get(idx))
+            .ok_or(Error::Logic)?;
+        let last_meta_event = self
+            .meta_election
+            .meta_event(last_sync_event_idxref.event_index());
+        let parent_meta_event = self
+            .meta_election
+            .meta_event(last_sync_event_parent.event_index());
+
+        // we are only interested in situations where both meta events exist
+        if let (Some(last_meta_event), Some(parent_meta_event)) =
+            (last_meta_event, parent_meta_event)
+        {
+            let shares: BTreeMap<_, _> = last_meta_event
+                .meta_votes
+                .iter()
+                .filter(|&(peer_idx, meta_votes)| {
+                    // only get the meta votes for which the last one is at genuine flip step, and
+                    // there is a corresponding vec of meta votes in the parent meta event, for
+                    // which the last meta vote is not at the genuine flip step
+                    meta_votes
+                        .last()
+                        .map(|mv| mv.step == Step::GenuineFlip)
+                        .unwrap_or(false)
+                        && parent_meta_event
+                            .meta_votes
+                            .get(peer_idx)
+                            .and_then(|mvs| mvs.last())
+                            .map(|mv| mv.step != Step::GenuineFlip)
+                            .unwrap_or(false)
+                })
+                .filter_map(|(peer_idx, _)| {
+                    self.meta_election
+                        .round_hashes(peer_idx)
+                        .and_then(|round_hashes| round_hashes.last())
+                })
+                .filter_map(|round_hash| {
+                    self.common_coin
+                        .sign_round_hash(round_hash)
+                        .map(|sig_share| (round_hash.clone(), sig_share))
+                })
+                .collect();
+            if !shares.is_empty() {
+                let coin_shares_event = Event::new_from_coin_shares(
+                    self.our_last_event_index()?,
+                    shares,
+                    self.event_context_mut(),
+                )?;
+                let _ = self.add_event(coin_shares_event)?;
+            }
+        }
+
+        Ok(())
     }
 
     fn create_dkg_events(&mut self) -> Result<()> {
@@ -1889,6 +1903,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
         self.detect_duplicate_vote(event);
         self.detect_fork(event);
         self.detect_invalid_accusation(event);
+        self.detect_invalid_coin_shares(event)?;
 
         // TODO: detect other forms of malice here
 
@@ -2141,6 +2156,28 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
         self.accuse(event.creator(), Malice::InvalidAccusation(*event.hash()))
     }
 
+    fn detect_invalid_coin_shares(&mut self, event: &Event<S::PublicId>) -> Result<()> {
+        let creator_id = self
+            .peer_list
+            .get(event.creator())
+            .ok_or(Error::UnknownPeer)?
+            .id();
+        if let Some(shares) = event.coin_shares() {
+            for (round_hash, share) in shares {
+                if !self
+                    .common_coin
+                    .verify_share(round_hash, creator_id.clone(), share)
+                {
+                    self.pending_accusations.push((
+                        event.creator(),
+                        Malice::InvalidCoinShare(*event.hash(), round_hash.value().clone()),
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
     fn detect_invalid_gossip_creator(&mut self, _event_index: EventIndex) {
         /* TODO: bring this back somehow
         let accusation = {
@@ -2262,7 +2299,10 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
             | Malice::IncorrectGenesis(hash)
             | Malice::InvalidAccusation(hash)
             | Malice::InvalidGossipCreator(hash)
-            | Malice::Accomplice(hash, _) => self
+            | Malice::Accomplice(hash, _)
+            | Malice::InvalidDkgPart(hash, _)
+            | Malice::InvalidDkgAck(hash, _)
+            | Malice::InvalidCoinShare(hash, _) => self
                 .graph
                 .get_index(hash)
                 .and_then(|index| self.graph.get(index))

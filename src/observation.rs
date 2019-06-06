@@ -135,6 +135,9 @@ pub enum Malice<T: NetworkEvent, P: PublicId> {
     /// An invalid DKG Ack message; the hash is of the event containing the observation with the
     /// offending DkgMessage
     InvalidDkgAck(EventHash, AckFault),
+    /// Event's creator published an invalid coin share; the Hash is the round hash for which the
+    /// signature was invalid
+    InvalidCoinShare(EventHash, Hash),
 }
 
 impl<T: NetworkEvent, P: PublicId> Malice<T, P> {
@@ -156,7 +159,10 @@ impl<T: NetworkEvent, P: PublicId> Malice<T, P> {
             | Malice::Fork(hash)
             | Malice::InvalidAccusation(hash)
             | Malice::InvalidGossipCreator(hash)
-            | Malice::Accomplice(hash, _) => Some(hash),
+            | Malice::Accomplice(hash, _)
+            | Malice::InvalidDkgPart(hash, _)
+            | Malice::InvalidDkgAck(hash, _)
+            | Malice::InvalidCoinShare(hash, _) => Some(hash),
             Malice::DuplicateVote(_, _)
             | Malice::OtherParentBySameCreator(_)
             | Malice::SelfParentByDifferentCreator(_)

@@ -42,7 +42,7 @@ impl<V, E, P> Content<V, E, P> {
             | Cause::Response {
                 ref other_parent, ..
             } => Some(other_parent),
-            Cause::Observation { .. } | Cause::Initial => None,
+            Cause::Observation { .. } | Cause::CoinShares { .. } | Cause::Initial => None,
         }
     }
 
@@ -57,6 +57,9 @@ impl<V, E, P> Content<V, E, P> {
                 ref self_parent, ..
             }
             | Cause::Observation {
+                ref self_parent, ..
+            }
+            | Cause::CoinShares {
                 ref self_parent, ..
             } => Some(self_parent),
             Cause::Initial => None,

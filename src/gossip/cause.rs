@@ -24,10 +24,13 @@ use crate::observation::ObservationInfo;
 #[cfg(any(test, feature = "dump-graphs", feature = "testing"))]
 use crate::observation::ObservationStore;
 use crate::peer_list::PeerIndex;
+use crate::round_hash::RoundHash;
 use crate::vote::{Vote, VoteKey};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 #[cfg(feature = "dump-graphs")]
 use std::fmt::{self, Display, Formatter};
+use threshold_crypto::SignatureShare;
 
 #[serde(bound(
     serialize = "V: Serialize, E: Serialize",
@@ -36,11 +39,26 @@ use std::fmt::{self, Display, Formatter};
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
 pub(super) enum Cause<V, E> {
     // Identifiers of the latest `Event`s of own and the peer which sent the request.
-    Request { self_parent: E, other_parent: E },
+    Request {
+        self_parent: E,
+        other_parent: E,
+    },
     // Identifiers of the latest `Event`s of own and the peer which sent the response.
-    Response { self_parent: E, other_parent: E },
+    Response {
+        self_parent: E,
+        other_parent: E,
+    },
     // Identifier of our latest `Event`. Vote for a single network event.
-    Observation { self_parent: E, vote: V },
+    Observation {
+        self_parent: E,
+        vote: V,
+    },
+    // Signature shares for common coin flips; not an observation because it doesn't require
+    // consensus
+    CoinShares {
+        self_parent: E,
+        shares: BTreeMap<RoundHash, SignatureShare>,
+    },
     // Initial empty `Event` of this peer.
     Initial,
 }
@@ -81,6 +99,13 @@ impl<P: PublicId> Cause<VoteKey<P>, EventIndex> {
                     vote: vote_key,
                 }
             }
+            Cause::CoinShares {
+                self_parent,
+                shares,
+            } => Cause::CoinShares {
+                self_parent: self_parent_index(ctx.graph, &self_parent)?,
+                shares,
+            },
             Cause::Initial => Cause::Initial,
         };
 
@@ -112,6 +137,13 @@ impl<P: PublicId> Cause<VoteKey<P>, EventIndex> {
             } => Cause::Observation {
                 self_parent: self_parent_hash(ctx.graph, self_parent)?,
                 vote: vote.resolve(ctx.observations)?,
+            },
+            Cause::CoinShares {
+                self_parent,
+                ref shares,
+            } => Cause::CoinShares {
+                self_parent: self_parent_hash(ctx.graph, self_parent)?,
+                shares: shares.clone(),
             },
             Cause::Initial => Cause::Initial,
         };

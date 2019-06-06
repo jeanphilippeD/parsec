@@ -20,7 +20,6 @@ use crate::error::Error;
 #[cfg(any(test, feature = "testing"))]
 use crate::gossip::Graph;
 use crate::gossip::{Event, EventIndex, IndexedEventRef};
-use crate::hash::Hash;
 use crate::id::SecretId;
 #[cfg(any(test, feature = "testing"))]
 use crate::mock::PeerId;
@@ -136,11 +135,6 @@ impl<S: SecretId> PeerList<S> {
     /// Return public ids of all peers.
     pub fn all_ids(&self) -> impl Iterator<Item = (PeerIndex, &S::PublicId)> {
         self.iter().map(|(index, peer)| (index, peer.id()))
-    }
-
-    /// Returns an unsorted map of peer index => Hash(peer_id).
-    pub fn all_id_hashes(&self) -> impl Iterator<Item = (PeerIndex, &Hash)> {
-        self.iter().map(|(index, peer)| (index, peer.id_hash()))
     }
 
     /// Returns indices of the peers that can vote.
@@ -292,11 +286,6 @@ impl<S: SecretId> PeerList<S> {
     }
 
     /// Indices of events of the given creator, in insertion order.
-    #[cfg(any(
-        all(test, feature = "mock"),
-        feature = "dump-graphs",
-        feature = "malice-detection"
-    ))]
     pub fn peer_events<'a>(
         &'a self,
         peer_index: PeerIndex,
@@ -307,7 +296,6 @@ impl<S: SecretId> PeerList<S> {
     }
 
     /// Hashes of our events in insertion order.
-    #[cfg(any(all(test, feature = "mock"), feature = "malice-detection"))]
     pub fn our_events<'a>(&'a self) -> impl DoubleEndedIterator<Item = EventIndex> + 'a {
         self.peer_events(PeerIndex::OUR)
     }
