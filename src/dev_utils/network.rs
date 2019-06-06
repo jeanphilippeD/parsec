@@ -21,6 +21,7 @@ use crate::observation::{
 };
 use rand::{seq::SliceRandom, thread_rng, Rng};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::fmt;
 use threshold_crypto::{PublicKeySet, SecretKeySet};
 
 enum Message {
@@ -48,7 +49,6 @@ pub struct BlocksOrder {
     order: Vec<Observation>,
 }
 
-#[derive(Debug)]
 pub enum ConsensusError {
     DifferingBlocksOrder {
         order_1: BlocksOrder,
@@ -76,6 +76,67 @@ pub enum ConsensusError {
         accused: PeerId,
         malice: Malice<Transaction, PeerId>,
     },
+}
+
+impl fmt::Debug for ConsensusError {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ConsensusError::WrongBlocksNumber {
+                expected_min,
+                expected_max,
+                got,
+            } => write!(
+                formatter,
+                "WrongBlocksNumber {{ expected_min: {:?}, expected_max: {:?}, got: {:?} }}",
+                expected_min, expected_max, got
+            ),
+            ConsensusError::WrongPeers { expected, got } => write!(
+                formatter,
+                "WrongPeers {{ expected: {:?}, got: {:?} }}",
+                expected, got
+            ),
+            ConsensusError::InvalidSignatory {
+                observation,
+                signatory,
+            } => write!(
+                formatter,
+                "InvalidSignatory {{ observation: {:?}, signatory: {:?} }}",
+                observation, signatory
+            ),
+            ConsensusError::TooFewSignatures {
+                observation,
+                signatures,
+            } => write!(
+                formatter,
+                "TooFewSignatures {{ observation: {:?}, signatures: {:?} }}",
+                observation, signatures
+            ),
+            ConsensusError::UnexpectedAccusation {
+                accuser,
+                accused,
+                malice,
+            } => write!(
+                formatter,
+                "UnexpectedAccusation {{ accuser: {:?}, accused: {:?}, malice: {:?} }}",
+                accuser, accused, malice
+            ),
+            ConsensusError::DifferingBlocksOrder { order_1, order_2 } => {
+                writeln!(formatter, "DifferingBlocksOrder {{")?;
+                writeln!(
+                    formatter,
+                    "  peers: {:?} / {:?}",
+                    order_1.peer, order_2.peer
+                )?;
+                writeln!(formatter, "  order:")?;
+                for (i, (block1, block2)) in
+                    order_1.order.iter().zip(order_2.order.iter()).enumerate()
+                {
+                    writeln!(formatter, "  {}. {:?} / {:?}", i + 1, block1, block2)?;
+                }
+                writeln!(formatter, "}}")
+            }
+        }
+    }
 }
 
 fn peers_from_ids<R: Rng>(
