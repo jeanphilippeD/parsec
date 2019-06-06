@@ -126,6 +126,9 @@ impl PublicId for PeerId {
     fn verify_signature(&self, signature: &Self::Signature, data: &[u8]) -> bool {
         self.pub_sign.verify_detached(&signature.0, data)
     }
+    fn encrypt_with_rng<R: Rng, M: AsRef<[u8]>>(&self, _rng: &mut R, msg: M) -> Vec<u8> {
+        msg.as_ref().to_vec()
+    }
 }
 
 impl SecretId for PeerId {
@@ -135,6 +138,9 @@ impl SecretId for PeerId {
     }
     fn sign_detached(&self, data: &[u8]) -> Signature {
         Signature(self.sec_sign.sign_detached(data))
+    }
+    fn decrypt(&self, ct: &[u8]) -> Option<Vec<u8>> {
+        Some(ct.to_vec())
     }
 }
 
