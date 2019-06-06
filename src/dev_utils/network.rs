@@ -46,7 +46,7 @@ pub struct Network {
 #[derive(Debug)]
 pub struct BlocksOrder {
     peer: PeerId,
-    order: Vec<Observation>,
+    order: Vec<(Observation, Option<PeerId>)>,
 }
 
 pub enum ConsensusError {
@@ -243,19 +243,33 @@ impl Network {
     /// Returns true if all peers hold the same sequence of stable blocks.
     fn blocks_all_in_sequence(&self) -> Result<(), ConsensusError> {
         let first_peer = unwrap!(self.active_peers().next());
-        let payloads = first_peer.blocks_payloads();
+        let payloads = first_peer.all_blocks_payloads();
         if let Some(peer) = self
             .active_peers()
-            .find(|peer| peer.blocks_payloads() != payloads)
+            .find(|peer| peer.all_blocks_payloads() != payloads)
         {
             Err(ConsensusError::DifferingBlocksOrder {
                 order_1: BlocksOrder {
                     peer: first_peer.id.clone(),
-                    order: payloads.into_iter().cloned().collect(),
+                    order: first_peer
+                        .blocks()
+                        .into_iter()
+                        .map(|b| {
+                            let (obs, pid) = self.block_key(b);
+                            (obs.clone(), pid.cloned())
+                        })
+                        .collect(),
                 },
                 order_2: BlocksOrder {
                     peer: peer.id.clone(),
-                    order: peer.blocks_payloads().into_iter().cloned().collect(),
+                    order: peer
+                        .blocks()
+                        .into_iter()
+                        .map(|b| {
+                            let (obs, pid) = self.block_key(b);
+                            (obs.clone(), pid.cloned())
+                        })
+                        .collect(),
                 },
             })
         } else {
@@ -376,11 +390,25 @@ impl Network {
                         return Err(ConsensusError::DifferingBlocksOrder {
                             order_1: BlocksOrder {
                                 peer: peer.id.clone(),
-                                order: peer.blocks_payloads().into_iter().cloned().collect(),
+                                order: peer
+                                    .blocks()
+                                    .into_iter()
+                                    .map(|b| {
+                                        let (obs, pid) = self.block_key(b);
+                                        (obs.clone(), pid.cloned())
+                                    })
+                                    .collect(),
                             },
                             order_2: BlocksOrder {
                                 peer: old_peer.id.clone(),
-                                order: old_peer.blocks_payloads().into_iter().cloned().collect(),
+                                order: old_peer
+                                    .blocks()
+                                    .into_iter()
+                                    .map(|b| {
+                                        let (obs, pid) = self.block_key(b);
+                                        (obs.clone(), pid.cloned())
+                                    })
+                                    .collect(),
                             },
                         });
                     }
@@ -400,6 +428,8 @@ impl Network {
             } else {
                 None
             }
+        } else if block.payload().is_dkg() {
+            Some(&unwrap!(block.proofs().iter().next()).public_id)
         } else {
             None
         };

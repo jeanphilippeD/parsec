@@ -218,10 +218,8 @@ impl<S: SecretId> KeyGen<S> {
         our_id: &S::PublicId,
         voters: &BTreeSet<S::PublicId>,
     ) -> Result<(Self, Option<Part>), Error> {
-        // Note: no + 1 because threshold polynomial means threshold + 1 peers will be able ot
-        // decrypt the message, so this implies a supermajority of voters will be needed to flip a
-        // common coin.
-        let threshold = 1 * voters.len() / 3;
+        // Effectively ceil(N / 3) - 1
+        let threshold = (voters.len() + 2) / 3 - 1;
         // Use the OS random number generator for any randomness:
         let mut rng = rand::rngs::OsRng::new().expect("Could not open OS random number generator.");
         Self::new(our_id.clone(), voters.clone(), threshold, &mut rng)
