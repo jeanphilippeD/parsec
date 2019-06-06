@@ -2524,11 +2524,16 @@ pub(crate) struct TestParsec<T: NetworkEvent, S: SecretId>(Parsec<T, S>);
 
 #[cfg(all(test, feature = "mock"))]
 impl<T: NetworkEvent, S: SecretId> TestParsec<T, S> {
-    pub fn from_genesis(our_id: S, genesis_group: &BTreeSet<S::PublicId>) -> Self {
+    pub fn from_genesis(
+        our_id: S,
+        genesis_group: &BTreeSet<S::PublicId>,
+        common_coin: CommonCoin<S::PublicId>,
+    ) -> Self {
         TestParsec(Parsec::from_genesis(
             our_id,
             genesis_group,
             ConsensusMode::Supermajority,
+            common_coin,
         ))
     }
 
@@ -2536,12 +2541,14 @@ impl<T: NetworkEvent, S: SecretId> TestParsec<T, S> {
         our_id: S,
         genesis_group: &BTreeSet<S::PublicId>,
         section: &BTreeSet<S::PublicId>,
+        common_coin: CommonCoin<S::PublicId>,
     ) -> Self {
         TestParsec(Parsec::from_existing(
             our_id,
             genesis_group,
             section,
             ConsensusMode::Supermajority,
+            common_coin,
         ))
     }
 
@@ -2551,6 +2558,10 @@ impl<T: NetworkEvent, S: SecretId> TestParsec<T, S> {
 
     pub fn peer_list(&self) -> &PeerList<S> {
         &self.0.peer_list
+    }
+
+    pub fn common_coin(&self) -> &CommonCoin<S::PublicId> {
+        &self.0.common_coin
     }
 
     pub fn meta_election(&self) -> &MetaElection {

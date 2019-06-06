@@ -7,6 +7,7 @@
 // permissions and limitations relating to use of the SAFE Network Software.
 
 use crate::block::Block;
+use crate::common_coin::CommonCoin;
 use crate::dev_utils::parse_test_dot_file;
 use crate::error::Error;
 use crate::gossip::{Event, Graph, GraphSnapshot};
@@ -16,7 +17,9 @@ use crate::mock::{self, PeerId, Transaction};
 use crate::observation::Observation;
 use crate::parsec::TestParsec;
 use crate::peer_list::{PeerIndexSet, PeerListSnapshot, PeerState};
+use rand::thread_rng;
 use std::collections::BTreeSet;
+use threshold_crypto::SecretKeySet;
 
 macro_rules! assert_err {
     ($expected_error:pat, $result:expr) => {
@@ -72,9 +75,11 @@ fn nth_event<P: PublicId>(graph: &Graph<P>, n: usize) -> &Event<P> {
 fn from_existing() {
     let mut peers = mock::create_ids(10);
     let our_id = unwrap!(peers.pop());
-    let peers = peers.into_iter().collect();
+    let peers: BTreeSet<_> = peers.into_iter().collect();
+    let sks = SecretKeySet::random(3, &mut thread_rng());
+    let coin = CommonCoin::new(peers.clone(), sks.public_keys(), None);
 
-    let parsec = TestParsec::<Transaction, _>::from_existing(our_id.clone(), &peers, &peers);
+    let parsec = TestParsec::<Transaction, _>::from_existing(our_id.clone(), &peers, &peers, coin);
 
     // Existing section + us
     assert_eq!(parsec.peer_list().all_ids().count(), peers.len() + 1);
@@ -93,9 +98,11 @@ fn from_existing() {
 fn from_existing_requires_non_empty_genesis_group() {
     let mut peers = mock::create_ids(10);
     let our_id = unwrap!(peers.pop());
-    let peers = peers.into_iter().collect();
+    let peers: BTreeSet<_> = peers.into_iter().collect();
+    let sks = SecretKeySet::random(3, &mut thread_rng());
+    let coin = CommonCoin::new(peers.clone(), sks.public_keys(), None);
 
-    let _ = TestParsec::<Transaction, _>::from_existing(our_id, &BTreeSet::new(), &peers);
+    let _ = TestParsec::<Transaction, _>::from_existing(our_id, &BTreeSet::new(), &peers, coin);
 }
 
 // TODO: remove this `cfg` once the `maidsafe_utilities` crate with PR 130 is published.
@@ -105,10 +112,12 @@ fn from_existing_requires_non_empty_genesis_group() {
 fn from_existing_requires_that_genesis_group_does_not_contain_us() {
     let peers = mock::create_ids(10);
     let our_id = unwrap!(peers.first()).clone();
-    let genesis_group = peers.iter().cloned().collect();
+    let genesis_group: BTreeSet<_> = peers.iter().cloned().collect();
     let section = peers.into_iter().skip(1).collect();
+    let sks = SecretKeySet::random(3, &mut thread_rng());
+    let coin = CommonCoin::new(genesis_group.clone(), sks.public_keys(), None);
 
-    let _ = TestParsec::<Transaction, _>::from_existing(our_id, &genesis_group, &section);
+    let _ = TestParsec::<Transaction, _>::from_existing(our_id, &genesis_group, &section, coin);
 }
 
 // TODO: remove this `cfg` once the `maidsafe_utilities` crate with PR 130 is published.
@@ -118,9 +127,12 @@ fn from_existing_requires_that_genesis_group_does_not_contain_us() {
 fn from_existing_requires_non_empty_section() {
     let mut peers = mock::create_ids(10);
     let our_id = unwrap!(peers.pop());
-    let genesis_group = peers.into_iter().collect();
+    let genesis_group: BTreeSet<_> = peers.into_iter().collect();
+    let sks = SecretKeySet::random(3, &mut thread_rng());
+    let coin = CommonCoin::new(genesis_group.clone(), sks.public_keys(), None);
 
-    let _ = TestParsec::<Transaction, _>::from_existing(our_id, &genesis_group, &BTreeSet::new());
+    let _ =
+        TestParsec::<Transaction, _>::from_existing(our_id, &genesis_group, &BTreeSet::new(), coin);
 }
 
 // TODO: remove this `cfg` once the `maidsafe_utilities` crate with PR 130 is published.
@@ -130,19 +142,27 @@ fn from_existing_requires_non_empty_section() {
 fn from_existing_requires_that_section_does_not_contain_us() {
     let peers = mock::create_ids(10);
     let our_id = unwrap!(peers.first()).clone();
-    let genesis_group = peers.iter().skip(1).cloned().collect();
+    let genesis_group: BTreeSet<_> = peers.iter().skip(1).cloned().collect();
     let section = peers.into_iter().collect();
+    let sks = SecretKeySet::random(3, &mut thread_rng());
+    let coin = CommonCoin::new(genesis_group.clone(), sks.public_keys(), None);
 
-    let _ = TestParsec::<Transaction, _>::from_existing(our_id, &genesis_group, &section);
+    let _ = TestParsec::<Transaction, _>::from_existing(our_id, &genesis_group, &section, coin);
 }
 
 #[test]
 fn from_genesis() {
     let peers = mock::create_ids(10);
     let our_id = unwrap!(peers.first()).clone();
-    let peers = peers.into_iter().collect();
+    let peers: BTreeSet<_> = peers.into_iter().collect();
+    let sks = SecretKeySet::random(3, &mut thread_rng());
+    let coin = CommonCoin::new(
+        peers.clone(),
+        sks.public_keys(),
+        Some(sks.secret_key_share(0)),
+    );
 
-    let parsec = TestParsec::<Transaction, _>::from_genesis(our_id.clone(), &peers);
+    let parsec = TestParsec::<Transaction, _>::from_genesis(our_id.clone(), &peers, coin);
     // the peer_list should contain the entire genesis group
     assert_eq!(parsec.peer_list().all_ids().count(), peers.len());
     // initial event + genesis_observation
@@ -167,9 +187,15 @@ fn from_genesis() {
 fn from_genesis_requires_the_genesis_group_contains_us() {
     let mut peers = mock::create_ids(10);
     let our_id = unwrap!(peers.pop());
-    let peers = peers.into_iter().collect();
+    let peers: BTreeSet<_> = peers.into_iter().collect();
+    let sks = SecretKeySet::random(3, &mut thread_rng());
+    let coin = CommonCoin::new(
+        peers.clone(),
+        sks.public_keys(),
+        Some(sks.secret_key_share(0)),
+    );
 
-    let _ = TestParsec::<Transaction, _>::from_genesis(our_id.clone(), &peers);
+    let _ = TestParsec::<Transaction, _>::from_genesis(our_id.clone(), &peers, coin);
 }
 
 #[test]
@@ -229,7 +255,8 @@ fn add_peer() {
         .any(|(_, peer_id)| *peer_id == fred_id));
 
     // Construct Fred's Parsec instance.
-    let mut fred = TestParsec::from_existing(fred_id, &genesis_group, &genesis_group);
+    let fred_coin = alice.common_coin().validator_coin();
+    let mut fred = TestParsec::from_existing(fred_id, &genesis_group, &genesis_group, fred_coin);
 
     // Create a "naughty Carol" instance where the graph only shows four peers existing before
     // adding Fred.
@@ -293,7 +320,9 @@ fn remove_peer() {
         .map(|(_, id)| id.clone())
         .collect();
     let _ = section.remove(&eric_id);
-    let mut eric = TestParsec::<Transaction, _>::from_existing(eric_id.clone(), &section, &section);
+    let eric_coin = alice.common_coin().validator_coin();
+    let mut eric =
+        TestParsec::<Transaction, _>::from_existing(eric_id.clone(), &section, &section, eric_coin);
 
     // Peer state is (VOTE | SEND) when created from existing. Need to update the states to
     // (VOTE | SEND | RECV).
@@ -383,7 +412,14 @@ fn gossip_after_fork() {
         PeerId::new("Dave")
     ];
 
-    let mut alice = TestParsec::from_genesis(alice_id.clone(), &genesis_group);
+    let sks = SecretKeySet::random(1, &mut thread_rng());
+
+    let alice_coin = CommonCoin::new(
+        genesis_group.clone(),
+        sks.public_keys(),
+        Some(sks.secret_key_share(0)),
+    );
+    let mut alice = TestParsec::from_genesis(alice_id.clone(), &genesis_group, alice_coin);
 
     // Alice creates couple of valid events.
     let a_1_index = unwrap!(alice.peer_list().our_events().next());
@@ -406,7 +442,12 @@ fn gossip_after_fork() {
     let a_3_packed = alice.pack_event(&a_3);
     unwrap!(alice.unpack_and_add_event(a_3_packed));
 
-    let mut bob = TestParsec::from_genesis(bob_id.clone(), &genesis_group);
+    let bob_coin = CommonCoin::new(
+        genesis_group.clone(),
+        sks.public_keys(),
+        Some(sks.secret_key_share(1)),
+    );
+    let mut bob = TestParsec::from_genesis(bob_id.clone(), &genesis_group, bob_coin);
 
     // Alice sends a gossip request to Bob and receives a response back.
     let req = unwrap!(alice.create_gossip(Some(&bob_id)));
