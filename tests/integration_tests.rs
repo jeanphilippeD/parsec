@@ -411,7 +411,7 @@ fn extensive_dynamic_membership() {
     }
 
     loop {
-        if env.rng.gen_weighted_bool(chance_to_add) {
+        if env.rng.gen_ratio(1, chance_to_add) {
             if let Some(name) = names.next() {
                 step += 200;
                 schedule.push((step, AddPeer(PeerId::new(name))));

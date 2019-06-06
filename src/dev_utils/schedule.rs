@@ -13,7 +13,7 @@ use super::{PeerStatus, PeerStatuses};
 use crate::dump_graph::DIR;
 use crate::mock::{PeerId, Transaction, NAMES};
 use crate::observation::{ConsensusMode, Observation as ParsecObservation};
-use rand::seq;
+use rand::seq::SliceRandom;
 use rand::Rng;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -677,5 +677,5 @@ fn sample<T: Clone, R: Rng>(rng: &mut R, items: &[T], strategy: Sampling) -> Vec
         }
     };
 
-    seq::sample_slice(rng, items, amount)
+    items.choose_multiple(rng, amount).cloned().collect()
 }

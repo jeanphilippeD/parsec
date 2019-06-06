@@ -18,7 +18,7 @@ use crate::mock::{PeerId, Transaction};
 use crate::observation::{
     is_more_than_two_thirds, ConsensusMode, Malice, Observation as ParsecObservation,
 };
-use rand::Rng;
+use rand::{seq::SliceRandom, Rng};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 enum Message {
@@ -240,7 +240,7 @@ impl Network {
         step: usize,
     ) {
         let recipient = loop {
-            let recipient = unwrap!(rng.choose(present_peers));
+            let recipient = unwrap!(present_peers.choose(rng));
             if recipient != sender {
                 break recipient;
             }

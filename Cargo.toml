@@ -15,10 +15,11 @@ version = "0.5.0"
 fnv = "~1.0.6"
 lazy_static = "~1.0.1"
 log = "~0.3.8"
-maidsafe_utilities = "~0.17.0"
+maidsafe_utilities = { version = "~0.17.0", git = "https://github.com/fizyk20/maidsafe_utilities", branch = "rand0.6" }
 pom = { version = "~1.1.0", optional = true }
 proptest = { version = "~0.8.6", optional = true }
-rand = "~0.4.2"
+rand = "~0.6.4"
+rand_xorshift = "~0.1"
 safe_crypto = { version = "~0.4.0", optional = true }
 serde = "~1.0.66"
 serde_derive = "~1.0.66"

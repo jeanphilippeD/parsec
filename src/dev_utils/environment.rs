@@ -8,11 +8,12 @@
 
 use crate::dev_utils::network::Network;
 use crate::observation::ConsensusMode;
-use maidsafe_utilities::SeededRng;
-use rand::{Rng, SeedableRng, XorShiftRng};
+use maidsafe_utilities::{convert_seed, SeededRng};
+use rand::{RngCore, SeedableRng};
+use rand_xorshift::XorShiftRng;
 use std::fmt;
 
-pub trait RngDebug: Rng + fmt::Debug {}
+pub trait RngDebug: RngCore + fmt::Debug {}
 
 impl RngDebug for SeededRng {}
 impl RngDebug for XorShiftRng {}
@@ -38,7 +39,7 @@ impl Environment {
             RngChoice::SeededRandom => Box::new(SeededRng::new()),
             RngChoice::Seeded(seed) => Box::new(SeededRng::from_seed(seed)),
             RngChoice::SeededXor(seed) => {
-                let rng = Box::new(XorShiftRng::from_seed(seed));
+                let rng = Box::new(XorShiftRng::from_seed(convert_seed(seed)));
                 println!("Using {:?}", rng);
                 rng
             }

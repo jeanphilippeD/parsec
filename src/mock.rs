@@ -8,7 +8,10 @@
 
 use crate::id::{PublicId, SecretId};
 use crate::network_event::NetworkEvent;
-use rand::{Rand, Rng};
+use rand::{
+    distributions::{Alphanumeric, Distribution, Standard},
+    Rng,
+};
 use safe_crypto::Signature as SafeSignature;
 use safe_crypto::{gen_sign_keypair, PublicSignKey, SecretSignKey};
 use std::cmp::Ordering;
@@ -159,9 +162,13 @@ impl Debug for Transaction {
     }
 }
 
-impl Rand for Transaction {
-    fn rand<R: Rng>(rng: &mut R) -> Self {
-        Transaction(rng.gen_ascii_chars().take(5).collect())
+impl Distribution<Transaction> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Transaction {
+        let mut s = String::with_capacity(5);
+        for _ in 0..5 {
+            s.push(Alphanumeric.sample(rng));
+        }
+        Transaction(s)
     }
 }
 

@@ -13,7 +13,7 @@ use crate::block::Block;
 use crate::mock::{PeerId, Transaction};
 use crate::observation::{ConsensusMode, Malice, Observation as ParsecObservation};
 use crate::parsec::Parsec;
-use rand::Rng;
+use rand::{seq::SliceRandom, Rng};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Debug, Formatter};
 
@@ -169,7 +169,7 @@ impl PeerStatuses {
             .peers_by_status(|s| *s == PeerStatus::Active || *s == PeerStatus::Failed)
             .map(|(id, _)| id)
             .collect();
-        (*unwrap!(rng.choose(&names))).clone()
+        (*unwrap!(names.choose(rng))).clone()
     }
 
     fn choose_name_to_fail<R: Rng>(&self, rng: &mut R) -> PeerId {
@@ -177,7 +177,7 @@ impl PeerStatuses {
             .peers_by_status(|s| *s == PeerStatus::Active)
             .map(|(id, _)| id)
             .collect();
-        (*unwrap!(rng.choose(&names))).clone()
+        (*unwrap!(names.choose(rng))).clone()
     }
 
     /// Returns an iterator through all the peers

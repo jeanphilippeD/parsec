@@ -66,7 +66,7 @@ mod detail {
     use crate::observation::ObservationStore;
     use crate::peer_list::{PeerIndex, PeerIndexMap, PeerIndexSet, PeerList};
     use crate::serialise;
-    use rand::{self, Rng};
+    use rand::{self, distributions::Alphanumeric, Rng};
     use std::cell::RefCell;
     use std::cmp;
     use std::collections::{BTreeMap, BTreeSet};
@@ -82,7 +82,7 @@ mod detail {
         static ref ROOT_DIR_PREFIX: PathBuf = { env::temp_dir().join("parsec_graphs") };
         static ref ROOT_DIR_SUFFIX: String = {
             rand::thread_rng()
-                .gen_ascii_chars()
+                .sample_iter(&Alphanumeric)
                 .take(6)
                 .collect::<String>()
         };
