@@ -206,6 +206,7 @@ pub mod dev_utils;
 pub mod mock;
 
 pub use crate::block::Block;
+pub use crate::common_coin::CommonCoin;
 #[cfg(feature = "dump-graphs")]
 pub use crate::dump_graph::DIR;
 pub use crate::error::{Error, Result};

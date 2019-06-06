@@ -59,11 +59,12 @@ extern crate unwrap;
 use clap::{App, Arg, ArgMatches};
 use maidsafe_utilities::{log, SeededRng};
 use parsec::mock::{PeerId, Transaction};
-use parsec::{Block, ConsensusMode, Parsec, Request};
-use rand::Rng;
+use parsec::{Block, CommonCoin, ConsensusMode, Parsec, Request};
+use rand::{distributions::Alphanumeric, seq::SliceRandom, Rng};
 use std::collections::BTreeSet;
 use std::fmt::{self, Debug, Formatter};
 use std::{process, usize};
+use threshold_crypto::{PublicKeySet, SecretKeySet};
 
 const MIN_PEER_COUNT: usize = 2;
 const MAX_EVENT_COUNT: usize = 1000;
@@ -101,10 +102,14 @@ struct Peer {
 }
 
 impl Peer {
-    fn from_genesis(our_id: PeerId, genesis_group: &BTreeSet<PeerId>) -> Self {
+    fn from_genesis(
+        our_id: PeerId,
+        genesis_group: &BTreeSet<PeerId>,
+        coin: CommonCoin<PeerId>,
+    ) -> Self {
         Self {
             id: our_id.clone(),
-            parsec: Parsec::from_genesis(our_id, genesis_group, ConsensusMode::Supermajority),
+            parsec: Parsec::from_genesis(our_id, genesis_group, ConsensusMode::Supermajority, coin),
             observations: vec![],
             blocks: vec![],
         }
@@ -114,6 +119,7 @@ impl Peer {
         our_id: PeerId,
         genesis_group: &BTreeSet<PeerId>,
         section: &BTreeSet<PeerId>,
+        coin: CommonCoin<PeerId>,
     ) -> Self {
         Self {
             id: our_id.clone(),
@@ -122,6 +128,7 @@ impl Peer {
                 genesis_group,
                 section,
                 ConsensusMode::Supermajority,
+                coin,
             ),
             observations: vec![],
             blocks: vec![],
@@ -185,8 +192,18 @@ impl Peer {
         format!("{:?}: ", self.id)
     }
 
+    fn count_stable_blocks(&self) -> usize {
+        self.blocks
+            .iter()
+            .filter(|block| match block.payload() {
+                parsec::Observation::DkgMessage(_) => false,
+                _ => true,
+            })
+            .count()
+    }
+
     fn completed(&self, params: &Params) -> bool {
-        self.blocks.len() == params.total_observations()
+        self.count_stable_blocks() == params.total_observations()
     }
 }
 
@@ -425,6 +442,7 @@ struct Environment {
     params: Params,
     rng: SeededRng,
     genesis_group: BTreeSet<PeerId>,
+    genesis_keys: PublicKeySet,
     peers: Vec<Peer>,
     opaque_observations: Vec<Observation>,
     peers_added_count: usize,
@@ -439,15 +457,18 @@ impl Environment {
     fn new() -> Self {
         let params = Params::new();
 
-        let rng = params
+        let mut rng = params
             .seed
             .map_or_else(SeededRng::new, SeededRng::from_seed);
         println!("Using {:?}", rng);
+
+        let sks = SecretKeySet::random(params.genesis_peer_count / 3, &mut rng);
 
         let mut env = Environment {
             params,
             rng,
             genesis_group: BTreeSet::new(),
+            genesis_keys: sks.public_keys(),
             peers: vec![],
             opaque_observations: vec![],
             peers_added_count: 0,
@@ -466,7 +487,15 @@ impl Environment {
         env.peers = env
             .genesis_group
             .iter()
-            .map(|id| Peer::from_genesis(id.clone(), &env.genesis_group))
+            .enumerate()
+            .map(|(index, id)| {
+                let coin = CommonCoin::new(
+                    env.genesis_group.clone(),
+                    sks.public_keys(),
+                    Some(sks.secret_key_share(index)),
+                );
+                Peer::from_genesis(id.clone(), &env.genesis_group, coin)
+            })
             .collect();
 
         env.opaque_observations = (0..env.params.opaque_event_count)
@@ -481,7 +510,7 @@ impl Environment {
         let peer = PeerId::from_index(self.pretty_id_count).unwrap_or_else(|| {
             PeerId::new_with_random_keypair(
                 self.rng
-                    .gen_ascii_chars()
+                    .sample_iter(&Alphanumeric)
                     .take(6)
                     .collect::<String>()
                     .as_str(),
@@ -496,7 +525,7 @@ impl Environment {
     fn num_to_drop(&mut self) -> usize {
         if self.peers.len() > MIN_PEER_COUNT
             && self.params.remove_peers_count != self.peers_removed_count
-            && self.rng.gen_weighted_bool(REMOVE_PEERS_CHANCE)
+            && self.rng.gen_ratio(1, REMOVE_PEERS_CHANCE)
         {
             self.rng.gen_range(1, (self.peers.len() + 2) / 3)
         } else {
@@ -509,7 +538,7 @@ impl Environment {
     fn try_new_peer(&mut self) {
         self.current_new_peer = if self.peers.len() < self.params.max_peer_count
             && self.params.add_peers_count != self.peers_added_count
-            && self.rng.gen_weighted_bool(ADD_PEER_CHANCE)
+            && self.rng.gen_ratio(1, ADD_PEER_CHANCE)
         {
             Some(self.new_peer_id())
         } else {
@@ -524,7 +553,7 @@ impl Environment {
         self.peers_removed_count += num_to_drop;
         self.current_remove_peers.clear();
         while num_to_drop > 0 {
-            self.rng.shuffle(&mut self.peers);
+            self.peers.shuffle(&mut self.rng);
             let dropped = unwrap!(self.peers.pop());
             println!("Dropping {:?}", dropped.id);
             self.current_remove_peers.push(dropped.id);
@@ -534,7 +563,9 @@ impl Environment {
             self.peers_added_count += 1;
             println!("Adding {:?}", new_peer_id);
             let section = self.peers.iter().map(|peer| peer.id.clone()).collect();
-            let new_peer = Peer::from_existing(new_peer_id.clone(), &self.genesis_group, &section);
+            let coin = CommonCoin::new(self.genesis_group.clone(), self.genesis_keys.clone(), None);
+            let new_peer =
+                Peer::from_existing(new_peer_id.clone(), &self.genesis_group, &section, coin);
             self.peers.push(new_peer);
         }
     }
@@ -601,7 +632,7 @@ impl Environment {
         println!("\nGossip Round {:03}\n================", self.current_round);
         self.current_round += 1;
 
-        self.rng.shuffle(&mut self.peers);
+        self.peers.shuffle(&mut self.rng);
 
         // Each peer will send a request and handle the corresponding response.  For each peer,
         // there is also a chance that they will vote for one of the observations if they haven't
@@ -628,9 +659,9 @@ impl Environment {
 
             let peer = &mut self.peers[sender_index];
             if peer.observations.len() < self.params.total_observations()
-                && self.rng.gen_weighted_bool(OPAQUE_CHANCE)
+                && self.rng.gen_ratio(1, OPAQUE_CHANCE)
             {
-                self.rng.shuffle(&mut self.opaque_observations);
+                self.opaque_observations.shuffle(&mut self.rng);
                 peer.vote_for_first_not_already_voted_for(&self.opaque_observations);
             }
 
