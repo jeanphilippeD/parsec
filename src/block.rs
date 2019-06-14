@@ -12,6 +12,7 @@ use crate::{
     network_event::NetworkEvent,
     observation::Observation,
     vote::Vote,
+    DkgResult,
 };
 use std::{
     collections::{vec_deque, BTreeMap, BTreeSet, VecDeque},
@@ -27,6 +28,14 @@ pub struct Block<T: NetworkEvent, P: PublicId> {
 }
 
 impl<T: NetworkEvent, P: PublicId> Block<T, P> {
+    /// Create a `Block` with no signatures for a single DkgResult
+    pub fn new_dkg_block(result: DkgResult) -> Self {
+        Self {
+            payload: Observation::DkgResult(result),
+            proofs: BTreeSet::new(),
+        }
+    }
+
     /// Creates a `Block` from `votes`.
     pub fn new(votes: &BTreeMap<P, Vote<T, P>>) -> Result<Self, Error> {
         let payload = if let Some(vote) = votes.values().next() {

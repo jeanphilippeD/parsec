@@ -183,7 +183,6 @@ mod error;
 mod gossip;
 mod hash;
 mod id;
-#[allow(unused)]
 mod key_gen;
 mod meta_voting;
 mod network_event;

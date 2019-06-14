@@ -255,6 +255,28 @@ fn add_few_peers_and_vote() {
 }
 
 #[test]
+fn run_dkg() {
+    use parsec::dev_utils::ObservationEvent;
+
+    let mut names = NAMES.iter();
+    let mut env = Environment::new(SEED);
+
+    let obs_schedule = ObservationSchedule {
+        genesis: Genesis::new(names.by_ref().take(4).cloned().map(PeerId::new).collect()),
+        schedule: vec![(50, ObservationEvent::StartDkg)],
+    };
+
+    let options = ScheduleOptions::default();
+    let schedule = Schedule::from_observation_schedule(&mut env, &options, obs_schedule);
+
+    unwrap!(env.network.execute_schedule(&mut env.rng, schedule));
+
+    let peer = unwrap!(env.network.active_non_malicious_peers().next());
+    let block = unwrap!(peer.blocks().last());
+    assert!(block.payload().is_dkg_result());
+}
+
+#[test]
 fn add_many_peers_and_vote() {
     let mut env = Environment::new(SEED);
     let options = ScheduleOptions {

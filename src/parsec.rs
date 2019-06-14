@@ -22,6 +22,7 @@ use crate::{
         Event, EventContextRef, EventIndex, Graph, IndexedEventRef, PackedEvent, Request, Response,
     },
     id::{PublicId, SecretId},
+    key_gen::{message::DkgMessage, Ack, AckOutcome, KeyGen, Part, PartOutcome},
     meta_voting::{MetaElection, MetaEvent, MetaEventBuilder, MetaVote, Observer},
     network_event::NetworkEvent,
     observation::{
@@ -48,6 +49,8 @@ use std::{
     num::NonZeroUsize,
     usize,
 };
+
+pub(crate) type KeyGenId = usize;
 
 /// The main object which manages creating and receiving gossip about network events from peers, and
 /// which provides a sequence of consensused [Block](struct.Block.html)s by applying the PARSEC
@@ -90,6 +93,10 @@ use std::{
 pub struct Parsec<T: NetworkEvent, S: SecretId> {
     // The PeerInfo of other nodes.
     peer_list: PeerList<S>,
+    // A distributed key generation.
+    key_gen: BTreeMap<KeyGenId, KeyGen<S>>,
+    // Next KeyGenId
+    key_gen_next_id: KeyGenId,
     // The Gossip graph.
     graph: Graph<S::PublicId>,
     // Information about observations stored in the graph, mapped to their hashes.
@@ -99,6 +106,8 @@ pub struct Parsec<T: NetworkEvent, S: SecretId> {
     // The map of meta votes of the events on each consensus block.
     meta_election: MetaElection,
     consensus_mode: ConsensusMode,
+    // Dkg messages to rase at the end of processing of current gossip message.
+    pending_dkg_msgs: Vec<DkgMessage>,
     // Accusations to raise at the end of the processing of current gossip message.
     #[cfg(feature = "malice-detection")]
     pending_accusations: Accusations<T, S::PublicId>,
@@ -231,11 +240,14 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
 
         Self {
             peer_list,
+            key_gen: BTreeMap::new(),
+            key_gen_next_id: KeyGenId::default(),
             graph: Graph::new(),
             consensused_blocks: VecDeque::new(),
             observations: BTreeMap::new(),
             meta_election: MetaElection::new(genesis_group),
             consensus_mode,
+            pending_dkg_msgs: vec![],
             #[cfg(feature = "malice-detection")]
             pending_accusations: vec![],
             pending_events: vec![],
@@ -330,6 +342,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
 
         let src_index = self.get_peer_index(src)?;
         let other_parent = self.unpack_and_add_events(src_index, req.packed_events)?;
+        self.create_dkg_events()?;
         #[cfg(feature = "malice-detection")]
         self.create_accusation_events(other_parent)?;
         self.create_sync_event(true, other_parent)?;
@@ -354,6 +367,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
 
         let src_index = self.get_peer_index(src)?;
         let other_parent = self.unpack_and_add_events(src_index, resp.packed_events)?;
+        self.create_dkg_events()?;
         #[cfg(feature = "malice-detection")]
         self.create_accusation_events(other_parent)?;
         self.create_sync_event(false, other_parent)?;
@@ -827,12 +841,130 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
 
                 self.handle_remove_peer(event_index, offender)
             }
+            Some(Observation::DkgResult(_)) => {
+                log_or_panic!("Unexpected DkgResult consensus.");
+                None
+            }
+            Some(Observation::DkgMessage(msg)) => {
+                if self.handle_dkg_message(payload_key, msg.clone()).is_none() {
+                    warn!(
+                        "Ignoring DkgMessage with Error: key: {:?}, msg: {:?}",
+                        payload_key, msg
+                    );
+                }
+                None
+            }
             Some(Observation::Genesis { .. }) | Some(Observation::OpaquePayload(_)) => None,
             None => {
                 log_or_panic!("Failed to get observation from hash.");
                 None
             }
         }
+    }
+
+    fn handle_dkg_message(&mut self, payload_key: &ObservationKey, msg: DkgMessage) -> Option<()> {
+        let creator_id = self.peer_list.get(payload_key.peer_index()?)?.id().clone();
+
+        match msg {
+            DkgMessage::Part { key_gen_id, part } => {
+                self.handle_dkg_message_part(&creator_id, key_gen_id, part)
+            }
+            DkgMessage::Ack { key_gen_id, ack } => {
+                self.handle_dkg_message_ack(&creator_id, key_gen_id, ack)
+            }
+        }
+    }
+
+    fn handle_dkg_message_part(
+        &mut self,
+        creator_id: &S::PublicId,
+        key_gen_id: KeyGenId,
+        part: Part,
+    ) -> Option<()> {
+        if let Some(key_gen) = &mut self.key_gen.get_mut(&key_gen_id) {
+            let part_result = key_gen
+                .handle_part(self.peer_list.our_id(), creator_id, part.clone())
+                .map_err(|err| warn!("handle_dkg_message_part error: {:?}", err))
+                .ok()?;
+
+            match part_result {
+                PartOutcome::Valid(Some(ack)) => {
+                    self.pending_dkg_msgs
+                        .push(DkgMessage::Ack { key_gen_id, ack });
+                }
+                PartOutcome::Valid(None) => (),
+                PartOutcome::Invalid(fault) => {
+                    warn!(
+                        "An invalid Part was detected from {:?} with fault {:?}",
+                        creator_id, fault
+                    );
+                }
+            }
+        }
+
+        Some(())
+    }
+
+    fn handle_dkg_message_ack(
+        &mut self,
+        creator_id: &S::PublicId,
+        key_gen_id: KeyGenId,
+        ack: Ack,
+    ) -> Option<()> {
+        if let Some(key_gen) = &mut self.key_gen.get_mut(&key_gen_id) {
+            let ack_result = key_gen
+                .handle_ack(&self.peer_list.our_id(), creator_id, ack.clone())
+                .map_err(|err| warn!("handle_dkg_message_ack error: {:?}", err))
+                .ok()?;
+
+            match ack_result {
+                AckOutcome::Valid => {
+                    if key_gen.is_ready() {
+                        debug!(
+                            "{:?}: key_gen for block number {} is ready.",
+                            self.peer_list.our_pub_id(),
+                            key_gen_id
+                        );
+                        let dkg_result = key_gen.generate().ok()?;
+
+                        self.consensused_blocks.push_back(BlockGroup(
+                            iter::once(Block::new_dkg_block(dkg_result)).collect(),
+                        ));
+                        let _ = self.key_gen.remove(&key_gen_id);
+                    }
+                }
+                AckOutcome::Invalid(fault) => {
+                    warn!(
+                        "An invalid Ack was detected from {:?} with fault {:?}",
+                        creator_id, fault
+                    );
+                }
+            }
+        }
+        Some(())
+    }
+
+    #[allow(unused)]
+    /// Docs
+    pub fn handle_dkg_start_consensus(&mut self, rng: &mut rand::Rng) -> Option<()> {
+        let voters: BTreeSet<S::PublicId> = self
+            .peer_list
+            .voters()
+            .map(|(_, p)| p.id().clone())
+            .collect();
+
+        let threshold = (voters.len() - 1) / 3;
+        let (key_gen, part) = KeyGen::new(self.peer_list.our_id(), voters, threshold, rng).ok()?;
+
+        let key_gen_id = self.key_gen_next_id;
+        self.key_gen_next_id += 1;
+
+        if let Some(part) = part {
+            self.pending_dkg_msgs
+                .push(DkgMessage::Part { key_gen_id, part });
+        }
+        let _ = self.key_gen.insert(key_gen_id, key_gen);
+        Some(())
     }
 
     fn handle_add_peer(&mut self, peer_id: &S::PublicId) -> PeerListChange {
@@ -1331,7 +1463,11 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
             })
             .filter(|block| match block {
                 Err(Error::MissingVotes) => false,
-                Err(_) | Ok(_) => true,
+                Err(_) => true,
+                Ok(block) => {
+                    // Do not leak internal blocks to Parsec consumer
+                    !block.payload().is_dkg_message()
+                }
             })
             .collect();
 
@@ -1404,6 +1540,28 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
         Ok(())
     }
 
+    fn create_dkg_events(&mut self) -> Result<()> {
+        for msg in mem::replace(&mut self.pending_dkg_msgs, vec![]) {
+            self.create_dkg_event(msg)?;
+        }
+        Ok(())
+    }
+
+    fn create_dkg_event(&mut self, msg: DkgMessage) -> Result<()> {
+        self.process_or_queue_pending_event(PendingEvent::DkgMessage { msg })
+    }
+
+    fn add_dkg_event(&mut self, msg: DkgMessage) -> Result<()> {
+        // TODO: Like for Accusation, handle DkgMessage that should not be published yet.
+        // (Only for "malice-detection" enabled)
+        let event = self.new_event_from_observation(
+            self.our_last_event_index()?,
+            Observation::DkgMessage(msg),
+        )?;
+        let _ = self.add_event(event)?;
+        Ok(())
+    }
+
     // Returns an iterator over `self.events` which will yield all the events we think `peer_id`
     // doesn't yet know about.  We should already have checked that we know `peer_id` and that we
     // have recorded at least one event from this peer before calling this function.
@@ -1467,6 +1625,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
                 other_parent,
                 ..
             } => self.add_sync_event(is_request, other_parent),
+            PendingEvent::DkgMessage { msg } => self.add_dkg_event(msg),
             #[cfg(feature = "malice-detection")]
             PendingEvent::Accusation {
                 offender,
@@ -2086,6 +2245,9 @@ enum PendingEvent<T: NetworkEvent, P: PublicId> {
         is_request: bool,
         other_parent: EventIndex,
         _phantom: PhantomData<(T, P)>,
+    },
+    DkgMessage {
+        msg: DkgMessage,
     },
     #[cfg(feature = "malice-detection")]
     Accusation {

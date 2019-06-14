@@ -127,7 +127,7 @@ impl Network {
             .filter(|peer| peer.status() == PeerStatus::Active && !peer.ignore_process_events())
     }
 
-    fn active_non_malicious_peers(&self) -> impl Iterator<Item = &Peer> {
+    pub fn active_non_malicious_peers(&self) -> impl Iterator<Item = &Peer> {
         self.active_peers().filter(|peer| !peer.is_malicious())
     }
 
@@ -429,6 +429,11 @@ impl Network {
                     valid_voters = group.clone();
                 }
 
+                if block.payload().is_dkg_result() {
+                    // DKG blocks do not have signatures
+                    continue;
+                }
+
                 self.check_block_signatories(block, &valid_voters)?;
             }
 
@@ -633,6 +638,12 @@ impl Network {
                 }
 
                 self.peer_mut(&voting_peer_id).vote_for(&observation);
+            }
+            ScheduleEvent::StartDkg(_) => {
+                // For test purpose: simulate starting DKG on all nodes at the same time.
+                for peer_id in self.running_peers_ids() {
+                    self.peer_mut(&peer_id).dkg_start_consensus(rng)
+                }
             }
         }
         Ok(true)

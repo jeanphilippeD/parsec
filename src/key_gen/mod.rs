@@ -96,6 +96,7 @@
 //! key. No single node knows the secret master key.
 
 pub mod dkg_result;
+pub mod message;
 mod rng_adapter;
 
 #[cfg(test)]
