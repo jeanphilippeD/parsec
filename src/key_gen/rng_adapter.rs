@@ -9,11 +9,11 @@
 use rand::Rng;
 use rand_core::RngCore;
 
-pub(super) struct RngAdapter<'a, T>(pub &'a mut T);
+pub(super) struct RngAdapter<'a, T: ?Sized>(pub &'a mut T);
 
 impl<'a, T> RngCore for RngAdapter<'a, T>
 where
-    T: Rng,
+    T: Rng + ?Sized,
 {
     #[inline]
     fn next_u32(&mut self) -> u32 {

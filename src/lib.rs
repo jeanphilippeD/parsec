@@ -212,6 +212,7 @@ pub use crate::{
     error::{Error, Result},
     gossip::{EventHash, PackedEvent, Request, Response},
     id::{Proof, PublicId, SecretId},
+    key_gen::dkg_result::*,
     network_event::NetworkEvent,
     observation::{ConsensusMode, Malice, Observation},
     parsec::Parsec,

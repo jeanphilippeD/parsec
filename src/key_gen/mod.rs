@@ -95,12 +95,13 @@
 //! method above. The sum of the secret keys we received from each node is then used as our secret
 //! key. No single node knows the secret master key.
 
+pub mod dkg_result;
 mod rng_adapter;
 
 #[cfg(test)]
 mod tests;
 
-use crate::{PublicId, SecretId};
+use crate::{DkgResult, SecretId};
 use failure::Fail;
 use maidsafe_utilities::serialisation;
 use rand;
@@ -109,22 +110,15 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Debug, Formatter};
 use threshold_crypto::pairing::{CurveAffine, Field};
 use threshold_crypto::{
-    error::Error as CryptoError,
     poly::{BivarCommitment, BivarPoly, Poly},
     serde_impl::FieldWrap,
-    Fr, G1Affine, PublicKeySet, SecretKeyShare,
+    Fr, G1Affine, SecretKeyShare,
 };
 
 /// A local error while handling an `Ack` or `Part` message, that was not caused by that message
 /// being invalid.
 #[derive(Clone, Eq, PartialEq, Debug, Fail)]
 pub enum Error {
-    /// Error creating `KeyGen`.
-    #[fail(display = "Error creating KeyGen: {}", _0)]
-    Creation(CryptoError),
-    /// Error generating keys.
-    #[fail(display = "Error generating keys: {}", _0)]
-    Generation(CryptoError),
     /// Unknown sender.
     #[fail(display = "Unknown sender")]
     UnknownSender,
@@ -245,11 +239,11 @@ impl<S: SecretId> KeyGen<S> {
     ///
     /// If we are not a validator but only an observer, no `Part` message is produced and no
     /// messages need to be sent.
-    pub fn new<R: rand::Rng>(
+    pub fn new(
         sec_key: &S,
         pub_keys: BTreeSet<S::PublicId>,
         threshold: usize,
-        rng: &mut R,
+        rng: &mut rand::Rng,
     ) -> Result<(KeyGen<S>, Option<Part>), Error> {
         let our_id = sec_key.public_id().clone();
         let our_idx = pub_keys
@@ -267,7 +261,8 @@ impl<S: SecretId> KeyGen<S> {
             return Ok((key_gen, None)); // No part: we are an observer.
         }
 
-        let our_part = BivarPoly::random(threshold, &mut rng_adapter::RngAdapter(rng));
+        let mut rng = rng_adapter::RngAdapter(&mut *rng);
+        let our_part = BivarPoly::random(threshold, &mut rng);
         let commit = our_part.commitment();
         let encrypt = |(i, pk): (usize, &S::PublicId)| {
             let row = our_part.row(i + 1);
@@ -296,12 +291,11 @@ impl<S: SecretId> KeyGen<S> {
     ///
     /// All participating nodes must handle the exact same sequence of messages.
     /// Note that `handle_part` also needs to explicitly be called with this instance's own `Part`.
-    pub fn handle_part<R: rand::Rng>(
+    pub fn handle_part(
         &mut self,
         sec_key: &S,
         sender_id: &S::PublicId,
         part: Part,
-        rng: &mut R,
     ) -> Result<PartOutcome, Error> {
         let sender_idx = self.node_index(sender_id).ok_or(Error::UnknownSender)?;
         let row = match self.handle_part_or_fault(sec_key, sender_idx, sender_id, part) {
@@ -369,7 +363,7 @@ impl<S: SecretId> KeyGen<S> {
     ///
     /// All participating nodes must have handled the exact same sequence of `Part` and `Ack`
     /// messages before calling this method. Otherwise their key shares will not match.
-    pub fn generate(&self) -> Result<(PublicKeySet, Option<SecretKeyShare>), Error> {
+    pub fn generate(&self) -> Result<DkgResult, Error> {
         let mut pk_commit = Poly::zero().commitment();
         let mut opt_sk_val = self.our_idx.map(|_| Fr::zero());
         let is_complete = |part: &&ProposalState| part.is_complete(self.threshold);
@@ -386,7 +380,7 @@ impl<S: SecretId> KeyGen<S> {
         } else {
             None
         };
-        Ok((pk_commit.into(), opt_sk))
+        Ok(DkgResult::new(pk_commit.into(), opt_sk))
     }
 
     /// Handles a `Part` message, or returns a `PartFault` if it is invalid.

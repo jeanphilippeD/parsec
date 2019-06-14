@@ -23,9 +23,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::{KeyGen, Part, PartOutcome};
+use super::{KeyGen, PartOutcome};
 use crate::dev_utils::{Environment, RngChoice};
-use crate::id::{PublicId, SecretId};
 use crate::mock::PeerId;
 
 // Alter the seed here to reproduce failures
@@ -56,12 +55,7 @@ fn test_key_gen_with(threshold: usize, node_num: usize) {
         for (node_id, node) in nodes.iter_mut().enumerate() {
             let proposal = proposal.clone().expect("proposal");
             let ack = match node
-                .handle_part(
-                    &peer_ids[node_id],
-                    &peer_ids[sender_id],
-                    proposal,
-                    &mut env.rng,
-                )
+                .handle_part(&peer_ids[node_id], &peer_ids[sender_id], proposal)
                 .expect("failed to handle part")
             {
                 PartOutcome::Valid(Some(ack)) => ack,
@@ -90,19 +84,20 @@ fn test_key_gen_with(threshold: usize, node_num: usize) {
     let pub_key_set = nodes[0]
         .generate()
         .expect("Failed to generate `PublicKeySet` for node #0")
-        .0;
+        .public_key_set;
     let sig_shares: BTreeMap<_, _> = nodes
         .iter()
         .enumerate()
         .map(|(idx, node)| {
             assert!(node.is_ready());
-            let (pks, opt_sk) = node.generate().unwrap_or_else(|_| {
+            let dkg_result = node.generate().unwrap_or_else(|_| {
                 panic!(
                     "Failed to generate `PublicKeySet` and `SecretKeyShare` for node #{}",
                     idx
                 )
             });
-            let sk = opt_sk.expect("new secret key");
+            let sk = dkg_result.secret_key_share.expect("new secret key");
+            let pks = dkg_result.public_key_set;
             assert_eq!(pks, pub_key_set);
             let sig = sk.sign(msg);
             assert!(pks.public_key_share(idx).verify(&sig, msg));
