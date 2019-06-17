@@ -45,15 +45,32 @@ pub enum InputObservation<T: NetworkEvent, P: PublicId> {
     OpaquePayload(T),
 }
 
+impl<T: NetworkEvent, P: PublicId> InputObservation<T, P> {
+    /// Get an ObservationRef
+    pub fn as_ref(&self) -> ObservationRef<T, P> {
+        match self {
+            InputObservation::Add {
+                peer_id,
+                related_info,
+            } => ObservationRef::Add {
+                peer_id,
+                related_info,
+            },
+            InputObservation::Remove {
+                peer_id,
+                related_info,
+            } => ObservationRef::Remove {
+                peer_id,
+                related_info,
+            },
+            InputObservation::OpaquePayload(payload) => ObservationRef::OpaquePayload(payload),
+        }
+    }
+}
+
 impl<T: NetworkEvent, P: PublicId> Debug for InputObservation<T, P> {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
-        match self {
-            InputObservation::Add { peer_id, .. } => write!(formatter, "Add({:?})", peer_id),
-            InputObservation::Remove { peer_id, .. } => write!(formatter, "Remove({:?})", peer_id),
-            InputObservation::OpaquePayload(payload) => {
-                write!(formatter, "OpaquePayload({:?})", payload)
-            }
-        }
+        self.as_ref().fmt(formatter)
     }
 }
 
@@ -79,14 +96,27 @@ pub enum ParsecObservation<T: NetworkEvent, P: PublicId> {
     },
 }
 
-impl<T: NetworkEvent, P: PublicId> Debug for ParsecObservation<T, P> {
-    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+impl<T: NetworkEvent, P: PublicId> ParsecObservation<T, P> {
+    /// Get an ObservationRef
+    pub fn as_ref(&self) -> ObservationRef<T, P> {
         match self {
-            ParsecObservation::Genesis { group, .. } => write!(formatter, "Genesis({:?})", group),
+            ParsecObservation::Genesis {
+                group,
+                related_info,
+            } => ObservationRef::Genesis {
+                group,
+                related_info,
+            },
             ParsecObservation::Accusation { offender, malice } => {
-                write!(formatter, "Accusation {{ {:?}, {:?} }}", offender, malice)
+                ObservationRef::Accusation { offender, malice }
             }
         }
+    }
+}
+
+impl<T: NetworkEvent, P: PublicId> Debug for ParsecObservation<T, P> {
+    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+        self.as_ref().fmt(formatter)
     }
 }
 
@@ -201,19 +231,7 @@ impl<T: NetworkEvent, P: PublicId> Observation<T, P> {
 
 impl<T: NetworkEvent, P: PublicId> Debug for Observation<T, P> {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
-        match self {
-            Observation::Genesis { group, .. } => write!(formatter, "Genesis({:?})", group),
-            Observation::Add { peer_id, .. } => write!(formatter, "Add({:?})", peer_id),
-            Observation::Remove { peer_id, .. } => write!(formatter, "Remove({:?})", peer_id),
-            Observation::Accusation { offender, malice } => {
-                write!(formatter, "Accusation {{ {:?}, {:?} }}", offender, malice)
-            }
-            Observation::DkgResult(result) => write!(formatter, "{:?}", result),
-            Observation::DkgMessage(msg) => write!(formatter, "{:?}", msg),
-            Observation::OpaquePayload(payload) => {
-                write!(formatter, "OpaquePayload({:?})", payload)
-            }
-        }
+        self.as_ref().fmt(formatter)
     }
 }
 
@@ -261,6 +279,24 @@ pub enum ObservationRef<'a, T: NetworkEvent, P: PublicId> {
     OpaquePayload(&'a T),
     DkgResult(&'a DkgResult),
     DkgMessage(&'a DkgMessage),
+}
+
+impl<'a, T: NetworkEvent, P: PublicId> Debug for ObservationRef<'a, T, P> {
+    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+        match self {
+            ObservationRef::Genesis { group, .. } => write!(formatter, "Genesis({:?})", group),
+            ObservationRef::Add { peer_id, .. } => write!(formatter, "Add({:?})", peer_id),
+            ObservationRef::Remove { peer_id, .. } => write!(formatter, "Remove({:?})", peer_id),
+            ObservationRef::Accusation { offender, malice } => {
+                write!(formatter, "Accusation {{ {:?}, {:?} }}", offender, malice)
+            }
+            ObservationRef::DkgResult(result) => write!(formatter, "{:?}", result),
+            ObservationRef::DkgMessage(msg) => write!(formatter, "{:?}", msg),
+            ObservationRef::OpaquePayload(payload) => {
+                write!(formatter, "OpaquePayload({:?})", payload)
+            }
+        }
+    }
 }
 
 /// Type of malicious behaviour.
