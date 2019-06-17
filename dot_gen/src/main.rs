@@ -107,7 +107,7 @@ use parsec::{
         ScheduleOptions,
     },
     mock::{PeerId, Transaction},
-    ConsensusMode, DumpGraphMode, Observation, DIR, DUMP_MODE,
+    ConsensusMode, DumpGraphMode, DIR, DUMP_MODE,
 };
 use std::{
     collections::{BTreeMap, BTreeSet},

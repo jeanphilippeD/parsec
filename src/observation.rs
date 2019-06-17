@@ -56,7 +56,7 @@ impl<T: NetworkEvent, P: PublicId> InputObservation<T, P> {
     }
 
     /// Get an ObservationRef
-    pub fn as_ref(&self) -> ObservationRef<T, P> {
+    pub(crate) fn as_ref(&self) -> ObservationRef<T, P> {
         match self {
             InputObservation::Add {
                 peer_id,
@@ -107,7 +107,7 @@ pub enum ParsecObservation<T: NetworkEvent, P: PublicId> {
 
 impl<T: NetworkEvent, P: PublicId> ParsecObservation<T, P> {
     /// Get an ObservationRef
-    pub fn as_ref(&self) -> ObservationRef<T, P> {
+    pub(crate) fn as_ref(&self) -> ObservationRef<T, P> {
         match self {
             ParsecObservation::Genesis {
                 group,
@@ -133,7 +133,7 @@ impl<T: NetworkEvent, P: PublicId> Debug for ParsecObservation<T, P> {
 /// For internal use only
 #[serde(bound = "")]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum Observation<T: NetworkEvent, P: PublicId> {
+pub(crate) enum Observation<T: NetworkEvent, P: PublicId> {
     /// Genesis group
     Genesis {
         /// Members of the genesis group.
@@ -268,7 +268,7 @@ impl<T: NetworkEvent, P: PublicId> From<InputObservation<T, P>> for Observation<
 
 #[serde(bound = "")]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
-pub enum ObservationRef<'a, T: NetworkEvent, P: PublicId> {
+pub(crate) enum ObservationRef<'a, T: NetworkEvent, P: PublicId> {
     Genesis {
         group: &'a BTreeSet<P>,
         related_info: &'a Vec<u8>,

@@ -15,7 +15,7 @@ use crate::gossip::GraphSnapshot;
 #[cfg(feature = "malice-detection")]
 use crate::observation::Malice;
 use crate::{
-    block::{Block, BlockGroup},
+    block::{Block, BlockGroup, BlockPayload},
     dump_graph,
     error::{Error, Result},
     gossip::{
@@ -43,6 +43,7 @@ use itertools::Itertools;
 use std::ops::{Deref, DerefMut};
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
+    convert::TryFrom,
     iter,
     marker::PhantomData,
     mem,
@@ -416,7 +417,10 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
     }
 
     /// Checks if the given `observation` has already been voted for by the owning peer.
-    pub fn have_voted_for_internal(&self, observation: &ObservationRef<T, S::PublicId>) -> bool {
+    pub(crate) fn have_voted_for_internal(
+        &self,
+        observation: &ObservationRef<T, S::PublicId>,
+    ) -> bool {
         let hash = ObservationHash::from(observation);
         let key = ObservationKey::new(hash, PeerIndex::OUR, self.consensus_mode.of(observation));
         self.observations
@@ -439,7 +443,16 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
     /// consensused, but not yet popped out of the consensus queue.
     ///
     /// The observations are sorted first by the consensus order, then by the vote order.
-    pub fn our_unpolled_observations(&self) -> impl Iterator<Item = &Observation<T, S::PublicId>> {
+    pub fn our_unpolled_observations<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = BlockPayload<T, S::PublicId>> + 'a {
+        self.our_unpolled_observations_internal()
+            .filter_map(|obs| BlockPayload::try_from(obs.clone()).ok())
+    }
+
+    pub(crate) fn our_unpolled_observations_internal(
+        &self,
+    ) -> impl Iterator<Item = &Observation<T, S::PublicId>> {
         self.our_consensused_observations()
             .chain(self.our_unconsensused_observations())
     }

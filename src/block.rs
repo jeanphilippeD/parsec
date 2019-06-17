@@ -38,7 +38,7 @@ impl<T: NetworkEvent, P: PublicId> Block<T, P> {
     }
 
     /// Creates a `Block` from `votes`.
-    pub fn new(votes: &BTreeMap<P, Vote<T, P>>) -> Result<Self, Error> {
+    pub(crate) fn new(votes: &BTreeMap<P, Vote<T, P>>) -> Result<Self, Error> {
         let payload = if let Some(vote) = votes.values().next() {
             vote.payload().clone()
         } else {
@@ -108,7 +108,7 @@ impl<T: NetworkEvent, P: PublicId> BlockPayload<T, P> {
     }
 
     /// Get an ObservationRef
-    pub fn as_observation_ref(&self) -> ObservationRef<T, P> {
+    pub(crate) fn as_observation_ref(&self) -> ObservationRef<T, P> {
         match self {
             BlockPayload::ParsecObservation(ParsecObservation::Genesis {
                 group,

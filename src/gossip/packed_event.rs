@@ -12,9 +12,8 @@ use crate::{
     gossip::Cause,
     id::SecretId,
     mock::{PeerId, Transaction},
-    observation::Observation,
 };
-use crate::{hash::Hash, serialise, NetworkEvent, PublicId, Vote};
+use crate::{hash::Hash, serialise, vote::Vote, NetworkEvent, PublicId};
 use std::fmt::{self, Debug, Formatter};
 
 /// Packed event contains only content and signature.
@@ -83,10 +82,11 @@ impl PackedEvent<Transaction, PeerId> {
     }
 
     /// Construct a new `Observation` packed event.
-    pub fn new_observation(
+    #[cfg(all(test, feature = "malice-detection"))]
+    pub(crate) fn new_observation(
         creator: PeerId,
         self_parent: EventHash,
-        observation: Observation<Transaction, PeerId>,
+        observation: crate::observation::Observation<Transaction, PeerId>,
     ) -> Self {
         let vote = Vote::new(&creator, observation);
         let content = Content {

@@ -504,7 +504,7 @@ impl Peer {
         &self,
     ) -> impl Iterator<Item = (&PeerId, &Malice<Transaction, PeerId>)> {
         self.parsec
-            .our_unpolled_observations()
+            .our_unpolled_observations_internal()
             .filter_map(|payload| match payload {
                 ParsecObservation::Accusation {
                     ref offender,

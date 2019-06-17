@@ -19,7 +19,7 @@ use std::fmt::{self, Debug, Formatter};
 /// A helper struct carrying an `Observation` and a signature of this `Observation`.
 #[serde(bound(deserialize = "T: DeserializeOwned"))]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct Vote<T: NetworkEvent, P: PublicId> {
+pub(crate) struct Vote<T: NetworkEvent, P: PublicId> {
     payload: Observation<T, P>,
     signature: P::Signature,
 }

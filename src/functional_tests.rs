@@ -343,19 +343,19 @@ fn unpolled_observations() {
 
     // Since we haven't called `poll()` yet, our vote for `Add(Eric)` should be returned by
     // `our_unpolled_observations()`.
-    let add_eric = Observation::Add {
+    let add_eric = BlockPayload::InputObservation(InputObservation::Add {
         peer_id: PeerId::new("Eric"),
         related_info: vec![],
-    };
+    });
 
     assert_eq!(alice.our_unpolled_observations().count(), 1);
-    assert_eq!(*unwrap!(alice.our_unpolled_observations().next()), add_eric);
+    assert_eq!(unwrap!(alice.our_unpolled_observations().next()), add_eric);
 
     // Call `poll()` and retry - should have no effect to unpolled observations.
     assert!(alice.poll().is_none());
     assert!(alice.has_unpolled_observations());
     assert_eq!(alice.our_unpolled_observations().count(), 1);
-    assert_eq!(*unwrap!(alice.our_unpolled_observations().next()), add_eric);
+    assert_eq!(unwrap!(alice.our_unpolled_observations().next()), add_eric);
 
     // Have Alice process A_17 to get consensus on `Add(Eric)`.
     unwrap!(alice.add_event(a_17));
@@ -363,7 +363,7 @@ fn unpolled_observations() {
     // Since we haven't call `poll()` again yet, should still return our vote for `Add(Eric)`.
     assert!(alice.has_unpolled_observations());
     assert_eq!(alice.our_unpolled_observations().count(), 1);
-    assert_eq!(*unwrap!(alice.our_unpolled_observations().next()), add_eric);
+    assert_eq!(unwrap!(alice.our_unpolled_observations().next()), add_eric);
 
     // Call `poll()` and retry - should return none.
     unwrap!(alice.poll());
@@ -374,13 +374,14 @@ fn unpolled_observations() {
     // Vote for a new observation and check it is returned as unpolled, and that
     // `has_unpolled_observations()` returns `true` again.
     let vote = InputObservation::OpaquePayload(Transaction::new("ABCD"));
+    let vote_block = BlockPayload::InputObservation(vote.clone());
     unwrap!(alice.vote_for(vote.clone()));
 
     assert!(alice.has_unpolled_observations());
     assert_eq!(alice.our_unpolled_observations().count(), 1);
     assert_eq!(
-        unwrap!(alice.our_unpolled_observations().next()).as_ref(),
-        vote.as_ref()
+        unwrap!(alice.our_unpolled_observations().next()),
+        vote_block
     );
 
     // Reset, and re-run, this time adding Alice's vote early to check that it is returned in
@@ -389,11 +390,8 @@ fn unpolled_observations() {
     alice = TestParsec::from_parsed_contents(parse_test_dot_file("alice.dot"));
     unwrap!(alice.vote_for(vote.clone()));
     let mut unpolled_observations = alice.our_unpolled_observations();
-    assert_eq!(*unwrap!(unpolled_observations.next()), add_eric);
-    assert_eq!(
-        unwrap!(unpolled_observations.next()).as_ref(),
-        vote.as_ref()
-    );
+    assert_eq!(unwrap!(unpolled_observations.next()), add_eric);
+    assert_eq!(unwrap!(unpolled_observations.next()), vote_block);
     assert!(unpolled_observations.next().is_none());
 }
 

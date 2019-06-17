@@ -213,9 +213,8 @@ pub use crate::{
     id::{Proof, PublicId, SecretId},
     key_gen::dkg_result::*,
     network_event::NetworkEvent,
-    observation::{ConsensusMode, InputObservation, Malice, Observation},
+    observation::{ConsensusMode, InputObservation, Malice},
     parsec::Parsec,
-    vote::Vote,
 };
 
 use maidsafe_utilities::serialisation;
