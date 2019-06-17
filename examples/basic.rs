@@ -96,7 +96,7 @@ const ADD_PEER_CHANCE: u32 = 2;
 const REMOVE_PEERS_CHANCE: u32 = 5;
 
 type Seed = [u32; 4];
-type Observation = parsec::InputObservation<Transaction, PeerId>;
+type Observation = parsec::Observation<Transaction, PeerId>;
 type BlockPayload = parsec::BlockPayload<Transaction, PeerId>;
 
 struct Peer {
@@ -156,7 +156,7 @@ impl Peer {
     }
 
     fn vote_to_add(&mut self, peer_id: &PeerId) {
-        let add = vec![parsec::InputObservation::Add {
+        let add = vec![parsec::Observation::Add {
             peer_id: peer_id.clone(),
             related_info: vec![],
         }];
@@ -164,7 +164,7 @@ impl Peer {
     }
 
     fn vote_to_remove(&mut self, peer_id: &PeerId) {
-        let remove = vec![parsec::InputObservation::Remove {
+        let remove = vec![parsec::Observation::Remove {
             peer_id: peer_id.clone(),
             related_info: vec![],
         }];
@@ -179,9 +179,8 @@ impl Peer {
 
     fn has_added(&self, added_id: &PeerId) -> bool {
         self.blocks.iter().any(|block| match block.payload() {
-            parsec::BlockPayload::InputObservation(parsec::InputObservation::Add {
-                peer_id,
-                ..
+            parsec::BlockPayload::InputObservation(parsec::Observation::Add {
+                peer_id, ..
             }) => peer_id == added_id,
             _ => false,
         })
@@ -189,9 +188,8 @@ impl Peer {
 
     fn has_removed(&self, removed_id: &PeerId) -> bool {
         self.blocks.iter().any(|block| match block.payload() {
-            parsec::BlockPayload::InputObservation(parsec::InputObservation::Remove {
-                peer_id,
-                ..
+            parsec::BlockPayload::InputObservation(parsec::Observation::Remove {
+                peer_id, ..
             }) => peer_id == removed_id,
             _ => false,
         })
@@ -490,7 +488,7 @@ impl Environment {
             .collect();
 
         env.opaque_observations = (0..env.params.opaque_event_count)
-            .map(|_| parsec::InputObservation::OpaquePayload(env.rng.gen()))
+            .map(|_| parsec::Observation::OpaquePayload(env.rng.gen()))
             .collect();
 
         env

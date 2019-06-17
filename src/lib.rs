@@ -213,7 +213,7 @@ pub use crate::{
     id::{Proof, PublicId, SecretId},
     key_gen::dkg_result::*,
     network_event::NetworkEvent,
-    observation::{ConsensusMode, InputObservation, Malice},
+    observation::{ConsensusMode, InputObservation as Observation, Malice},
     parsec::Parsec,
 };
 
