@@ -9,7 +9,7 @@
 use super::{
     peer::{NetworkView, Peer, PeerStatus},
     schedule::{Schedule, ScheduleEvent, ScheduleOptions},
-    BlockPayload,
+    DevBlockPayload,
 };
 use crate::{
     block::{Block, BlockPayload as ParsecBlockPayload},
@@ -49,7 +49,7 @@ pub struct Network {
 #[derive(Debug)]
 pub struct BlocksOrder {
     peer: PeerId,
-    order: Vec<BlockPayload>,
+    order: Vec<DevBlockPayload>,
 }
 
 pub struct DifferingBlocksOrder {
@@ -93,11 +93,11 @@ pub enum ConsensusError {
         got: BTreeMap<PeerId, PeerStatus>,
     },
     InvalidSignatory {
-        observation: BlockPayload,
+        observation: DevBlockPayload,
         signatory: PeerId,
     },
     TooFewSignatures {
-        observation: BlockPayload,
+        observation: DevBlockPayload,
         signatures: BTreeSet<PeerId>,
     },
     UnexpectedAccusation {
@@ -316,7 +316,7 @@ impl Network {
     fn block_key<'a>(
         &self,
         block: &'a Block<Transaction, PeerId>,
-    ) -> (&'a BlockPayload, Option<&'a PeerId>) {
+    ) -> (&'a DevBlockPayload, Option<&'a PeerId>) {
         let peer_id = if block.payload().is_opaque() {
             if self.consensus_mode == ConsensusMode::Single {
                 Some(&unwrap!(block.proofs().iter().next()).public_id)

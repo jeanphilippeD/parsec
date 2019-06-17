@@ -6,7 +6,7 @@
 // KIND, either express or implied. Please review the Licences for the specific language governing
 // permissions and limitations relating to use of the SAFE Network Software.
 
-use super::{Environment, Observation, PeerStatus, PeerStatuses};
+use super::{DevObservation, Environment, PeerStatus, PeerStatuses};
 #[cfg(feature = "dump-graphs")]
 use crate::dump_graph::DIR;
 use crate::{
@@ -113,7 +113,7 @@ pub enum ScheduleEvent {
     /// concerning that node will be ignored.
     Fail(PeerId),
     /// This event makes a node vote on the given observation.
-    VoteFor(PeerId, Observation),
+    VoteFor(PeerId, DevObservation),
     /// Adds a peer to the network (this is separate from nodes voting to add the peer)
     AddPeer(PeerId),
     /// Removes a peer from the network (this is separate from nodes voting to remove the peer)
@@ -151,7 +151,7 @@ pub struct PendingObservations {
     min_delay: usize,
     max_delay: usize,
     p_delay: f64,
-    queues: BTreeMap<PeerId, BTreeMap<usize, Vec<Observation>>>,
+    queues: BTreeMap<PeerId, BTreeMap<usize, Vec<DevObservation>>>,
     opaque_vote_counts: BTreeMap<PeerId, usize>,
 }
 
@@ -173,7 +173,7 @@ impl PendingObservations {
         peers: I,
         strategy: Sampling,
         step: usize,
-        observation: &Observation,
+        observation: &DevObservation,
     ) {
         let peers: Vec<_> = peers.into_iter().collect();
         let peers = sample(rng, &peers, strategy);
@@ -195,7 +195,7 @@ impl PendingObservations {
     }
 
     /// Pops all the observations that should be made at `step` at the latest
-    pub fn pop_at_step(&mut self, peer: &PeerId, step: usize) -> Vec<Observation> {
+    pub fn pop_at_step(&mut self, peer: &PeerId, step: usize) -> Vec<DevObservation> {
         let mut result = vec![];
         if let Some(queue) = self.queues.get_mut(peer) {
             let to_leave = queue.split_off(&(step + 1));
@@ -354,7 +354,7 @@ impl ObservationEvent {
         }
     }
 
-    pub fn get_opaque(self) -> Option<Observation> {
+    pub fn get_opaque(self) -> Option<DevObservation> {
         match self {
             ObservationEvent::Opaque(t) => Some(ParsecObservation::OpaquePayload(t)),
             _ => None,
@@ -448,7 +448,7 @@ impl ObservationSchedule {
         }
     }
 
-    fn extract_opaque(&mut self) -> Vec<Observation> {
+    fn extract_opaque(&mut self) -> Vec<DevObservation> {
         let schedule = mem::replace(&mut self.schedule, vec![]);
         let (opaque, rest): (Vec<_>, _) = schedule
             .into_iter()
