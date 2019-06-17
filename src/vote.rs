@@ -12,7 +12,6 @@ use crate::{
     network_event::NetworkEvent,
     observation::{ConsensusMode, Observation, ObservationHash, ObservationKey, ObservationStore},
     peer_list::PeerIndex,
-    serialise,
 };
 use serde::de::DeserializeOwned;
 use std::fmt::{self, Debug, Formatter};
@@ -28,7 +27,7 @@ pub struct Vote<T: NetworkEvent, P: PublicId> {
 impl<T: NetworkEvent, P: PublicId> Vote<T, P> {
     /// Creates a `Vote` for `payload`.
     pub fn new<S: SecretId<PublicId = P>>(secret_id: &S, payload: Observation<T, P>) -> Self {
-        let signature = secret_id.sign_detached(&serialise(&payload));
+        let signature = secret_id.sign_detached(&payload.as_ref().serialise_for_signature());
         Self { payload, signature }
     }
 
@@ -44,7 +43,10 @@ impl<T: NetworkEvent, P: PublicId> Vote<T, P> {
 
     /// Validates this `Vote`'s signature and payload against the given public ID.
     pub fn is_valid(&self, public_id: &P) -> bool {
-        public_id.verify_signature(&self.signature, &serialise(&self.payload))
+        public_id.verify_signature(
+            &self.signature,
+            &self.payload.as_ref().serialise_for_signature(),
+        )
     }
 
     /// Creates a `Proof` from this `Vote`.  Returns `Err` if this `Vote` is not valid (i.e. if
@@ -80,7 +82,7 @@ impl<P: PublicId> VoteKey<P> {
         consensus_mode: ConsensusMode,
     ) -> (Self, Observation<T, P>) {
         let consensus_mode = consensus_mode.of(&vote.payload);
-        let hash = ObservationHash::from(&vote.payload);
+        let hash = ObservationHash::from(vote.payload.as_ref());
         let payload_key = ObservationKey::new(hash, creator, consensus_mode);
 
         let vote_key = Self {

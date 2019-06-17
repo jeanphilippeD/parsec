@@ -410,7 +410,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
 
     /// Checks if the given `observation` has already been voted for by the owning peer.
     pub fn have_voted_for(&self, observation: &Observation<T, S::PublicId>) -> bool {
-        let hash = ObservationHash::from(observation);
+        let hash = ObservationHash::from(observation.as_ref());
         let key = ObservationKey::new(hash, PeerIndex::OUR, self.consensus_mode.of(observation));
         self.observations
             .get(&key)

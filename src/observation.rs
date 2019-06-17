@@ -281,6 +281,12 @@ pub enum ObservationRef<'a, T: NetworkEvent, P: PublicId> {
     DkgMessage(&'a DkgMessage),
 }
 
+impl<'a, T: NetworkEvent, P: PublicId> ObservationRef<'a, T, P> {
+    pub fn serialise_for_signature(&self) -> Vec<u8> {
+        serialise(self)
+    }
+}
+
 impl<'a, T: NetworkEvent, P: PublicId> Debug for ObservationRef<'a, T, P> {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         match self {
@@ -447,9 +453,9 @@ impl ObservationHash {
     pub const ZERO: Self = ObservationHash(Hash::ZERO);
 }
 
-impl<'a, T: NetworkEvent, P: PublicId> From<&'a Observation<T, P>> for ObservationHash {
-    fn from(observation: &'a Observation<T, P>) -> Self {
-        ObservationHash(Hash::from(serialise(observation).as_slice()))
+impl<'a, T: NetworkEvent, P: PublicId> From<ObservationRef<'a, T, P>> for ObservationHash {
+    fn from(observation: ObservationRef<'a, T, P>) -> Self {
+        ObservationHash(Hash::from(observation.serialise_for_signature().as_slice()))
     }
 }
 

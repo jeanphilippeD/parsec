@@ -628,7 +628,7 @@ fn parse_interesting_content() -> Parser<u8, ObservationMap> {
             .into_iter()
             .map(|payload| {
                 (
-                    ObservationKey::Supermajority(ObservationHash::from(&payload)),
+                    ObservationKey::Supermajority(ObservationHash::from(payload.as_ref())),
                     payload,
                 )
             })
