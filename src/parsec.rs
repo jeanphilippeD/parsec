@@ -862,10 +862,6 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
 
                 self.handle_remove_peer(event_index, offender)
             }
-            Some(Observation::DkgResult(_)) => {
-                log_or_panic!("Unexpected DkgResult consensus.");
-                None
-            }
             Some(Observation::DkgMessage(msg)) => {
                 if self.handle_dkg_message(payload_key, msg.clone()).is_none() {
                     warn!(

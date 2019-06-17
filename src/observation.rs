@@ -166,12 +166,6 @@ pub(crate) enum Observation<T: NetworkEvent, P: PublicId> {
     },
     /// Vote for an event which is opaque to Parsec.
     OpaquePayload(T),
-    /// Output only: Do not vote for it.
-    /// Will have empty proof set.
-    /// public_key_set will be shared state.
-    /// secret_key_share will be unique to each peers: all participating peers will
-    /// have one assuming less than 1/3 malicious.
-    DkgResult(DkgResult),
     /// Internal only: Do not vote for it or expect it to come in blocks.
     /// Vote for the next message (Part or Ack) to be handled for the Distributed Key Generation
     /// algorithm used by our common coin.
@@ -192,14 +186,6 @@ impl<T: NetworkEvent, P: PublicId> Observation<T, P> {
     pub fn is_dkg_message(&self) -> bool {
         match *self {
             Observation::DkgMessage(_) => true,
-            _ => false,
-        }
-    }
-
-    /// Is this observation's an result only `DkgResult`
-    pub fn is_dkg_result(&self) -> bool {
-        match *self {
-            Observation::DkgResult(_) => true,
             _ => false,
         }
     }
@@ -232,7 +218,6 @@ impl<T: NetworkEvent, P: PublicId> Observation<T, P> {
                 related_info,
             },
             Observation::OpaquePayload(payload) => ObservationRef::OpaquePayload(payload),
-            Observation::DkgResult(result) => ObservationRef::DkgResult(result),
             Observation::DkgMessage(msg) => ObservationRef::DkgMessage(msg),
         }
     }

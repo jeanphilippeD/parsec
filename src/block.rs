@@ -176,7 +176,6 @@ impl<T: NetworkEvent, P: PublicId> TryFrom<Observation<T, P>> for BlockPayload<T
             Observation::OpaquePayload(payload) => Ok(BlockPayload::InputObservation(
                 InputObservation::OpaquePayload(payload),
             )),
-            Observation::DkgResult(result) => Ok(BlockPayload::DkgResult(result)),
             Observation::DkgMessage(_) => Err(Error::InternalPayload),
         }
     }
