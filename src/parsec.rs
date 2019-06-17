@@ -26,8 +26,8 @@ use crate::{
     meta_voting::{MetaElection, MetaEvent, MetaEventBuilder, MetaVote, Observer},
     network_event::NetworkEvent,
     observation::{
-        is_more_than_two_thirds, ConsensusMode, Observation, ObservationHash, ObservationKey,
-        ObservationStore,
+        is_more_than_two_thirds, ConsensusMode, InputObservation, Observation, ObservationHash,
+        ObservationKey, ObservationRef, ObservationStore,
     },
     parsec_helpers::find_interesting_content_for_event,
     peer_list::{Peer, PeerIndex, PeerIndexMap, PeerIndexSet, PeerList, PeerListChange, PeerState},
@@ -269,12 +269,19 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
     /// Returns an error if the owning peer is not a full member of the section yet, if it has
     /// already voted for this `observation`, or if adding a gossip event containing the vote to
     /// the gossip graph failed.
-    pub fn vote_for(&mut self, observation: Observation<T, S::PublicId>) -> Result<()> {
+    pub fn vote_for(&mut self, observation: InputObservation<T, S::PublicId>) -> Result<()> {
+        self.vote_for_internal(observation.into())
+    }
+
+    pub(crate) fn vote_for_internal(
+        &mut self,
+        observation: Observation<T, S::PublicId>,
+    ) -> Result<()> {
         debug!("{:?} voting for {:?}", self.our_pub_id(), observation);
 
         self.confirm_self_state(PeerState::VOTE)?;
 
-        if self.have_voted_for(&observation) {
+        if self.have_voted_for_internal(&observation.as_ref()) {
             return Err(Error::DuplicateVote);
         }
 
@@ -409,8 +416,8 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
     }
 
     /// Checks if the given `observation` has already been voted for by the owning peer.
-    pub fn have_voted_for(&self, observation: &Observation<T, S::PublicId>) -> bool {
-        let hash = ObservationHash::from(observation.as_ref());
+    pub fn have_voted_for_internal(&self, observation: &ObservationRef<T, S::PublicId>) -> bool {
+        let hash = ObservationHash::from(observation);
         let key = ObservationKey::new(hash, PeerIndex::OUR, self.consensus_mode.of(observation));
         self.observations
             .get(&key)
@@ -472,7 +479,7 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
         // signed by us, yet with payloads voted for by us.
         // In `Single` mode, on the other hand, check also that we signed it, to avoid false
         // positives when there are blocks with the same payloads but signed by someone else.
-        match self.consensus_mode.of(payload) {
+        match self.consensus_mode.of(&payload_ref) {
             ConsensusMode::Supermajority => matching_blocks.next().is_some(),
             ConsensusMode::Single => {
                 matching_blocks.any(|block| block.is_signed_by(self.our_pub_id()))
@@ -2484,7 +2491,7 @@ impl TestParsec<Transaction, PeerId> {
             offender: src.clone(),
             malice: Malice::Fork(last_hash),
         };
-        unwrap!(self.0.vote_for(invalid_observation.clone()));
+        unwrap!(self.0.vote_for_internal(invalid_observation.clone()));
         let invalid_accusation_hash = {
             let invalid_accusation = unwrap!(self.0.graph.get(self.our_last_event_index()));
             assert_eq!(

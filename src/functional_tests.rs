@@ -14,7 +14,7 @@ use crate::{
     id::{Proof, PublicId},
     meta_voting::MetaElectionSnapshot,
     mock::{self, PeerId, Transaction},
-    observation::{ConsensusMode, Observation, ParsecObservation},
+    observation::{ConsensusMode, InputObservation, Observation, ParsecObservation},
     parsec::TestParsec,
     peer_list::{PeerListSnapshot, PeerState},
 };
@@ -373,12 +373,15 @@ fn unpolled_observations() {
 
     // Vote for a new observation and check it is returned as unpolled, and that
     // `has_unpolled_observations()` returns `true` again.
-    let vote = Observation::OpaquePayload(Transaction::new("ABCD"));
+    let vote = InputObservation::OpaquePayload(Transaction::new("ABCD"));
     unwrap!(alice.vote_for(vote.clone()));
 
     assert!(alice.has_unpolled_observations());
     assert_eq!(alice.our_unpolled_observations().count(), 1);
-    assert_eq!(*unwrap!(alice.our_unpolled_observations().next()), vote);
+    assert_eq!(
+        unwrap!(alice.our_unpolled_observations().next()).as_ref(),
+        vote.as_ref()
+    );
 
     // Reset, and re-run, this time adding Alice's vote early to check that it is returned in
     // the correct order, i.e. after `Add(Eric)` at the point where `Add(Eric)` is consensused
@@ -387,7 +390,10 @@ fn unpolled_observations() {
     unwrap!(alice.vote_for(vote.clone()));
     let mut unpolled_observations = alice.our_unpolled_observations();
     assert_eq!(*unwrap!(unpolled_observations.next()), add_eric);
-    assert_eq!(*unwrap!(unpolled_observations.next()), vote);
+    assert_eq!(
+        unwrap!(unpolled_observations.next()).as_ref(),
+        vote.as_ref()
+    );
     assert!(unpolled_observations.next().is_none());
 }
 
@@ -750,7 +756,7 @@ mod handle_malice {
             bob.our_pub_id().clone(),
             PeerId::new("Derp")
         ];
-        unwrap!(alice.vote_for(Observation::Genesis {
+        unwrap!(alice.vote_for_internal(Observation::Genesis {
             group: invalid_genesis,
             related_info: vec![]
         }));

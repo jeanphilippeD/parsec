@@ -38,6 +38,6 @@ pub use self::{
     schedule::*,
 };
 
-type DevObservation =
-    super::observation::Observation<super::mock::Transaction, super::mock::PeerId>;
+type DevInputObservation =
+    super::observation::InputObservation<super::mock::Transaction, super::mock::PeerId>;
 type DevBlockPayload = super::block::BlockPayload<super::mock::Transaction, super::mock::PeerId>;

@@ -6,7 +6,7 @@
 // KIND, either express or implied. Please review the Licences for the specific language governing
 // permissions and limitations relating to use of the SAFE Network Software.
 
-use super::{DevBlockPayload, DevObservation};
+use super::{DevBlockPayload, DevInputObservation};
 use crate::{
     block::{Block, BlockGroup, BlockPayload as ParsecBlockPayload},
     error::Result,
@@ -233,7 +233,7 @@ pub struct Peer {
     grouped_blocks: Vec<BlockGroup<Transaction, PeerId>>,
     status: PeerStatus,
     network_view: NetworkView,
-    votes_to_make: Vec<DevObservation>,
+    votes_to_make: Vec<DevInputObservation>,
     /// Peers' IDs for which we have an `Observation::Add` block.
     added_peers_ids: BTreeSet<PeerId>,
     /// Peers' IDs for which we have an `Observation::Remove` block.
@@ -313,14 +313,15 @@ impl Peer {
         }
     }
 
-    pub fn vote_for(&mut self, observation: &DevObservation) {
+    pub fn vote_for(&mut self, observation: &DevInputObservation) {
         self.votes_to_make.push(observation.clone());
     }
 
     pub fn make_votes(&mut self) {
         let parsec = &mut self.parsec;
-        self.votes_to_make
-            .retain(|obs| !parsec.have_voted_for(obs) && parsec.vote_for(obs.clone()).is_err());
+        self.votes_to_make.retain(|obs| {
+            !parsec.have_voted_for_internal(&obs.as_ref()) && parsec.vote_for(obs.clone()).is_err()
+        });
     }
 
     pub fn dkg_start_consensus(&mut self, rng: &mut Rng) {

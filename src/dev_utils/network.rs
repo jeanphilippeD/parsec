@@ -17,8 +17,7 @@ use crate::{
     gossip::{Request, Response},
     mock::{PeerId, Transaction},
     observation::{
-        is_more_than_two_thirds, ConsensusMode, InputObservation, Malice,
-        Observation as InternalObservation, ParsecObservation,
+        is_more_than_two_thirds, ConsensusMode, InputObservation, Malice, ParsecObservation,
     },
 };
 use itertools::Itertools;
@@ -633,14 +632,14 @@ impl Network {
                 }
 
                 match observation {
-                    InternalObservation::Remove { ref peer_id, .. } => {
+                    InputObservation::Remove { ref peer_id, .. } => {
                         if self.allow_removal_of_peer(&peer_id) {
                             (*self.peer_mut(&peer_id)).mark_network_view_as_leaving();
                         } else {
                             return Ok(false);
                         }
                     }
-                    InternalObservation::Add { ref peer_id, .. } => {
+                    InputObservation::Add { ref peer_id, .. } => {
                         // If the peer to be added hasn't yet been inserted into `self.peers`, it
                         // means we should postpone voting for its addition until it is inserted.
                         if !self.peers.contains_key(peer_id) {

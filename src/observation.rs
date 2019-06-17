@@ -46,6 +46,15 @@ pub enum InputObservation<T: NetworkEvent, P: PublicId> {
 }
 
 impl<T: NetworkEvent, P: PublicId> InputObservation<T, P> {
+    /// Is this observation's payload opaque to PARSEC?
+    pub fn is_opaque(&self) -> bool {
+        if let InputObservation::OpaquePayload(_) = *self {
+            true
+        } else {
+            false
+        }
+    }
+
     /// Get an ObservationRef
     pub fn as_ref(&self) -> ObservationRef<T, P> {
         match self {
@@ -282,8 +291,26 @@ pub enum ObservationRef<'a, T: NetworkEvent, P: PublicId> {
 }
 
 impl<'a, T: NetworkEvent, P: PublicId> ObservationRef<'a, T, P> {
+    /// Docs
     pub fn serialise_for_signature(&self) -> Vec<u8> {
         serialise(self)
+    }
+
+    /// Is this observation's payload opaque to PARSEC?
+    pub fn is_opaque(&self) -> bool {
+        if let ObservationRef::OpaquePayload(_) = *self {
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Is this observation's an internal `DkgMessage`
+    pub fn is_dkg_message(&self) -> bool {
+        match *self {
+            ObservationRef::DkgMessage(_) => true,
+            _ => false,
+        }
     }
 }
 
@@ -453,8 +480,8 @@ impl ObservationHash {
     pub const ZERO: Self = ObservationHash(Hash::ZERO);
 }
 
-impl<'a, T: NetworkEvent, P: PublicId> From<ObservationRef<'a, T, P>> for ObservationHash {
-    fn from(observation: ObservationRef<'a, T, P>) -> Self {
+impl<'a, T: NetworkEvent, P: PublicId> From<&ObservationRef<'a, T, P>> for ObservationHash {
+    fn from(observation: &ObservationRef<'a, T, P>) -> Self {
         ObservationHash(Hash::from(observation.serialise_for_signature().as_slice()))
     }
 }
@@ -560,7 +587,10 @@ pub enum ConsensusMode {
 }
 
 impl ConsensusMode {
-    pub(crate) fn of<T: NetworkEvent, P: PublicId>(self, observation: &Observation<T, P>) -> Self {
+    pub(crate) fn of<T: NetworkEvent, P: PublicId>(
+        self,
+        observation: &ObservationRef<T, P>,
+    ) -> Self {
         if observation.is_opaque() {
             self
         } else if observation.is_dkg_message() {

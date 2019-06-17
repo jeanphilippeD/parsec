@@ -81,8 +81,8 @@ impl<P: PublicId> VoteKey<P> {
         creator: PeerIndex,
         consensus_mode: ConsensusMode,
     ) -> (Self, Observation<T, P>) {
-        let consensus_mode = consensus_mode.of(&vote.payload);
-        let hash = ObservationHash::from(vote.payload.as_ref());
+        let consensus_mode = consensus_mode.of(&vote.payload.as_ref());
+        let hash = ObservationHash::from(&vote.payload.as_ref());
         let payload_key = ObservationKey::new(hash, creator, consensus_mode);
 
         let vote_key = Self {

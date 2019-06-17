@@ -196,7 +196,7 @@ enum Action {
 impl Action {
     fn run(self, parsec: &mut Parsec<Transaction, PeerId>) {
         match self {
-            Action::Vote(observation) => unwrap!(parsec.vote_for(observation)),
+            Action::Vote(observation) => unwrap!(parsec.vote_for_internal(observation)),
             Action::Requesting(recipient) => {
                 let _ = unwrap!(parsec.create_gossip(&recipient));
             }
