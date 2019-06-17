@@ -461,11 +461,12 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
     }
 
     fn has_our_unpolled_blocks(&self, payload: &Observation<T, S::PublicId>) -> bool {
+        let payload_ref = payload.as_ref();
         let mut matching_blocks = self
             .consensused_blocks
             .iter()
             .flatten()
-            .filter(|block| block.payload() == payload);
+            .filter(|block| block.payload().as_observation_ref() == payload_ref);
 
         // In `Supermajority` mode, check only if the payload matches, as there can be blocks not
         // signed by us, yet with payloads voted for by us.
@@ -1462,12 +1463,8 @@ impl<T: NetworkEvent, S: SecretId> Parsec<T, S> {
                 Block::new(&votes)
             })
             .filter(|block| match block {
-                Err(Error::MissingVotes) => false,
-                Err(_) => true,
-                Ok(block) => {
-                    // Do not leak internal blocks to Parsec consumer
-                    !block.payload().is_dkg_message()
-                }
+                Err(Error::MissingVotes) | Err(Error::InternalPayload) => false,
+                Ok(_) | Err(_) => true,
             })
             .collect();
 

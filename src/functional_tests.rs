@@ -7,14 +7,14 @@
 // permissions and limitations relating to use of the SAFE Network Software.
 
 use crate::{
-    block::Block,
+    block::{Block, BlockPayload},
     dev_utils::{parse_test_dot_file, Record, TestIterator},
     error::Error,
     gossip::{Event, Graph, GraphSnapshot},
     id::{Proof, PublicId},
     meta_voting::MetaElectionSnapshot,
     mock::{self, PeerId, Transaction},
-    observation::{ConsensusMode, Observation},
+    observation::{ConsensusMode, Observation, ParsecObservation},
     parsec::TestParsec,
     peer_list::{PeerListSnapshot, PeerState},
 };
@@ -396,7 +396,7 @@ fn our_unpolled_observations_with_consensus_mode_single() {
     let mut alice = Record::from(parse_test_dot_file("alice.dot")).play();
 
     let block = unwrap!(alice.poll());
-    if let Observation::Genesis { .. } = block.payload() {
+    if let BlockPayload::ParsecObservation(ParsecObservation::Genesis { .. }) = block.payload() {
     } else {
         panic!();
     }

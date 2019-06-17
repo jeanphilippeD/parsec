@@ -39,3 +39,4 @@ pub use self::{
 };
 
 type Observation = super::observation::Observation<super::mock::Transaction, super::mock::PeerId>;
+type BlockPayload = super::block::BlockPayload<super::mock::Transaction, super::mock::PeerId>;

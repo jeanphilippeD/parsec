@@ -207,13 +207,13 @@ pub mod mock;
 #[cfg(feature = "dump-graphs")]
 pub use crate::dump_graph::{DumpGraphMode, DIR, DUMP_MODE};
 pub use crate::{
-    block::Block,
+    block::{Block, BlockPayload},
     error::{Error, Result},
     gossip::{EventHash, PackedEvent, Request, Response},
     id::{Proof, PublicId, SecretId},
     key_gen::dkg_result::*,
     network_event::NetworkEvent,
-    observation::{ConsensusMode, Malice, Observation},
+    observation::{ConsensusMode, InputObservation, Malice, Observation},
     parsec::Parsec,
     vote::Vote,
 };

@@ -6,14 +6,15 @@
 // KIND, either express or implied. Please review the Licences for the specific language governing
 // permissions and limitations relating to use of the SAFE Network Software.
 
-use super::Observation;
+use super::{BlockPayload, Observation};
 use crate::{
-    block::{Block, BlockGroup},
+    block::{Block, BlockGroup, BlockPayload as ParsecBlockPayload},
     error::Result,
     gossip::{Cause, Event, EventIndex, Request, Response},
     mock::{PeerId, Transaction},
     observation::{
-        is_more_than_two_thirds, ConsensusMode, Malice, Observation as ParsecObservation,
+        is_more_than_two_thirds, ConsensusMode, InputObservation, Malice,
+        Observation as ParsecObservation,
     },
     parsec::{Parsec, TestParsec},
     peer_list::PeerIndex,
@@ -352,7 +353,10 @@ impl Peer {
 
     fn make_active_if_added(&mut self, block: &Block<Transaction, PeerId>) {
         if self.status == PeerStatus::Pending {
-            if let ParsecObservation::Add { ref peer_id, .. } = *block.payload() {
+            if let ParsecBlockPayload::InputObservation(InputObservation::Add {
+                ref peer_id, ..
+            }) = *block.payload()
+            {
                 if self.id() == peer_id {
                     self.status = PeerStatus::Active;
                 }
@@ -367,12 +371,13 @@ impl Peer {
             for block in &block_group {
                 self.make_active_if_added(block);
                 match block.payload() {
-                    ParsecObservation::Add { peer_id, .. } => {
-                        assert!(self.added_peers_ids.insert(peer_id.clone()))
-                    }
-                    ParsecObservation::Remove { peer_id, .. } => {
-                        assert!(self.removed_peers_ids.insert(peer_id.clone()))
-                    }
+                    ParsecBlockPayload::InputObservation(InputObservation::Add {
+                        peer_id, ..
+                    }) => assert!(self.added_peers_ids.insert(peer_id.clone())),
+                    ParsecBlockPayload::InputObservation(InputObservation::Remove {
+                        peer_id,
+                        ..
+                    }) => assert!(self.removed_peers_ids.insert(peer_id.clone())),
                     _ => (),
                 }
             }
@@ -488,7 +493,7 @@ impl Peer {
     }
 
     /// Returns the payloads of `self.blocks` in the order in which they were returned by `poll()`.
-    pub fn blocks_payloads(&self) -> Vec<&Observation> {
+    pub fn blocks_payloads(&self) -> Vec<&BlockPayload> {
         self.blocks().map(Block::payload).collect()
     }
 
@@ -506,10 +511,6 @@ impl Peer {
                 } => Some((offender, malice)),
                 _ => None,
             })
-    }
-
-    pub fn is_active_and_has_block(&self, payload: &Observation) -> bool {
-        self.status == PeerStatus::Active && self.blocks().any(|block| block.payload() == payload)
     }
 
     pub fn is_malicious(&self) -> bool {

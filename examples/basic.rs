@@ -97,6 +97,7 @@ const REMOVE_PEERS_CHANCE: u32 = 5;
 
 type Seed = [u32; 4];
 type Observation = parsec::Observation<Transaction, PeerId>;
+type BlockPayload = parsec::BlockPayload<Transaction, PeerId>;
 
 struct Peer {
     id: PeerId,
@@ -178,19 +179,25 @@ impl Peer {
 
     fn has_added(&self, added_id: &PeerId) -> bool {
         self.blocks.iter().any(|block| match block.payload() {
-            parsec::Observation::Add { peer_id, .. } => peer_id == added_id,
+            parsec::BlockPayload::InputObservation(parsec::InputObservation::Add {
+                peer_id,
+                ..
+            }) => peer_id == added_id,
             _ => false,
         })
     }
 
     fn has_removed(&self, removed_id: &PeerId) -> bool {
         self.blocks.iter().any(|block| match block.payload() {
-            parsec::Observation::Remove { peer_id, .. } => peer_id == removed_id,
+            parsec::BlockPayload::InputObservation(parsec::InputObservation::Remove {
+                peer_id,
+                ..
+            }) => peer_id == removed_id,
             _ => false,
         })
     }
 
-    fn blocks_payloads(&self) -> Vec<&Observation> {
+    fn blocks_payloads(&self) -> Vec<&BlockPayload> {
         self.blocks.iter().map(Block::payload).collect::<Vec<_>>()
     }
 

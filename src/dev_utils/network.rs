@@ -9,15 +9,16 @@
 use super::{
     peer::{NetworkView, Peer, PeerStatus},
     schedule::{Schedule, ScheduleEvent, ScheduleOptions},
-    Observation,
+    BlockPayload,
 };
 use crate::{
-    block::Block,
+    block::{Block, BlockPayload as ParsecBlockPayload},
     error::Error,
     gossip::{Request, Response},
     mock::{PeerId, Transaction},
     observation::{
-        is_more_than_two_thirds, ConsensusMode, Malice, Observation as ParsecObservation,
+        is_more_than_two_thirds, ConsensusMode, InputObservation, Malice,
+        Observation as InternalObservation, ParsecObservation,
     },
 };
 use itertools::Itertools;
@@ -48,7 +49,7 @@ pub struct Network {
 #[derive(Debug)]
 pub struct BlocksOrder {
     peer: PeerId,
-    order: Vec<Observation>,
+    order: Vec<BlockPayload>,
 }
 
 pub struct DifferingBlocksOrder {
@@ -92,11 +93,11 @@ pub enum ConsensusError {
         got: BTreeMap<PeerId, PeerStatus>,
     },
     InvalidSignatory {
-        observation: Observation,
+        observation: BlockPayload,
         signatory: PeerId,
     },
     TooFewSignatures {
-        observation: Observation,
+        observation: BlockPayload,
         signatures: BTreeSet<PeerId>,
     },
     UnexpectedAccusation {
@@ -315,7 +316,7 @@ impl Network {
     fn block_key<'a>(
         &self,
         block: &'a Block<Transaction, PeerId>,
-    ) -> (&'a Observation, Option<&'a PeerId>) {
+    ) -> (&'a BlockPayload, Option<&'a PeerId>) {
         let peer_id = if block.payload().is_opaque() {
             if self.consensus_mode == ConsensusMode::Single {
                 Some(&unwrap!(block.proofs().iter().next()).public_id)
@@ -425,7 +426,11 @@ impl Network {
 
         for block_group in block_groups {
             for block in block_group {
-                if let ParsecObservation::Genesis { ref group, .. } = *block.payload() {
+                if let ParsecBlockPayload::ParsecObservation(ParsecObservation::Genesis {
+                    ref group,
+                    ..
+                }) = *block.payload()
+                {
                     valid_voters = group.clone();
                 }
 
@@ -439,11 +444,19 @@ impl Network {
 
             for block in block_group {
                 match *block.payload() {
-                    ParsecObservation::Genesis { .. } => (),
-                    ParsecObservation::Add { ref peer_id, .. } => {
+                    ParsecBlockPayload::ParsecObservation(ParsecObservation::Genesis {
+                        ..
+                    }) => (),
+                    ParsecBlockPayload::InputObservation(InputObservation::Add {
+                        ref peer_id,
+                        ..
+                    }) => {
                         let _ = valid_voters.insert(peer_id.clone());
                     }
-                    ParsecObservation::Remove { ref peer_id, .. } => {
+                    ParsecBlockPayload::InputObservation(InputObservation::Remove {
+                        ref peer_id,
+                        ..
+                    }) => {
                         let _ = valid_voters.remove(peer_id);
                     }
                     _ => {}
@@ -620,14 +633,14 @@ impl Network {
                 }
 
                 match observation {
-                    ParsecObservation::Remove { ref peer_id, .. } => {
+                    InternalObservation::Remove { ref peer_id, .. } => {
                         if self.allow_removal_of_peer(&peer_id) {
                             (*self.peer_mut(&peer_id)).mark_network_view_as_leaving();
                         } else {
                             return Ok(false);
                         }
                     }
-                    ParsecObservation::Add { ref peer_id, .. } => {
+                    InternalObservation::Add { ref peer_id, .. } => {
                         // If the peer to be added hasn't yet been inserted into `self.peers`, it
                         // means we should postpone voting for its addition until it is inserted.
                         if !self.peers.contains_key(peer_id) {

@@ -21,6 +21,8 @@ pub enum Error {
     UnknownPayload,
     /// Attempt to create a block with no votes.
     MissingVotes,
+    /// Attempt to create a block with a payload that is only internal.
+    InternalPayload,
     /// Failed to verify signature.
     SignatureFailure,
     /// Peer is not known to our node.
@@ -69,6 +71,7 @@ impl Display for Error {
                 "The payload hash doesn't correspond to any payload known to our node."
             ),
             Error::MissingVotes => write!(f, "Block cannot be created with no votes"),
+            Error::InternalPayload => write!(f, "Block cannot be created internal payload"),
             Error::SignatureFailure => write!(
                 f,
                 "The message or signature might be corrupted, or the signer is wrong."

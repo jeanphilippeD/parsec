@@ -26,6 +26,74 @@ use std::{
 /// An enum of the various network events for which a peer can vote.
 #[serde(bound = "")]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum InputObservation<T: NetworkEvent, P: PublicId> {
+    /// Vote to add the indicated peer to the network.
+    Add {
+        /// Public id of the peer to be added
+        peer_id: P,
+        /// Extra arbitrary information for use by the client
+        related_info: Vec<u8>,
+    },
+    /// Vote to remove the indicated peer from the network.
+    Remove {
+        /// Public id of the peer to be removed
+        peer_id: P,
+        /// Extra arbitrary information for use by the client
+        related_info: Vec<u8>,
+    },
+    /// Vote for an event which is opaque to Parsec.
+    OpaquePayload(T),
+}
+
+impl<T: NetworkEvent, P: PublicId> Debug for InputObservation<T, P> {
+    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+        match self {
+            InputObservation::Add { peer_id, .. } => write!(formatter, "Add({:?})", peer_id),
+            InputObservation::Remove { peer_id, .. } => write!(formatter, "Remove({:?})", peer_id),
+            InputObservation::OpaquePayload(payload) => {
+                write!(formatter, "OpaquePayload({:?})", payload)
+            }
+        }
+    }
+}
+
+/// An enum of the various parsec events for which a peer can vote.
+#[serde(bound = "")]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum ParsecObservation<T: NetworkEvent, P: PublicId> {
+    /// Genesis group
+    Genesis {
+        /// Members of the genesis group.
+        group: BTreeSet<P>,
+        /// Extra arbitrary information for use by the client.
+        /// Note: this can be set through the `genesis_related_info` argument of
+        /// `Parsec::from_genesis`.
+        related_info: Vec<u8>,
+    },
+    /// Vote to accuse a peer of malicious behaviour.
+    Accusation {
+        /// Public id of the peer committing the malice.
+        offender: P,
+        /// Type of the malice committed.
+        malice: Malice<T, P>,
+    },
+}
+
+impl<T: NetworkEvent, P: PublicId> Debug for ParsecObservation<T, P> {
+    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+        match self {
+            ParsecObservation::Genesis { group, .. } => write!(formatter, "Genesis({:?})", group),
+            ParsecObservation::Accusation { offender, malice } => {
+                write!(formatter, "Accusation {{ {:?}, {:?} }}", offender, malice)
+            }
+        }
+    }
+}
+
+/// An enum of the various events peers can vote for.
+/// For internal use only
+#[serde(bound = "")]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Observation<T: NetworkEvent, P: PublicId> {
     /// Genesis group
     Genesis {
@@ -96,6 +164,39 @@ impl<T: NetworkEvent, P: PublicId> Observation<T, P> {
             _ => false,
         }
     }
+
+    /// Get an ObservationRef
+    pub fn as_ref(&self) -> ObservationRef<T, P> {
+        match self {
+            Observation::Genesis {
+                group,
+                related_info,
+            } => ObservationRef::Genesis {
+                group,
+                related_info,
+            },
+            Observation::Accusation { offender, malice } => {
+                ObservationRef::Accusation { offender, malice }
+            }
+            Observation::Add {
+                peer_id,
+                related_info,
+            } => ObservationRef::Add {
+                peer_id,
+                related_info,
+            },
+            Observation::Remove {
+                peer_id,
+                related_info,
+            } => ObservationRef::Remove {
+                peer_id,
+                related_info,
+            },
+            Observation::OpaquePayload(payload) => ObservationRef::OpaquePayload(payload),
+            Observation::DkgResult(result) => ObservationRef::DkgResult(result),
+            Observation::DkgMessage(msg) => ObservationRef::DkgMessage(msg),
+        }
+    }
 }
 
 impl<T: NetworkEvent, P: PublicId> Debug for Observation<T, P> {
@@ -114,6 +215,52 @@ impl<T: NetworkEvent, P: PublicId> Debug for Observation<T, P> {
             }
         }
     }
+}
+
+impl<T: NetworkEvent, P: PublicId> From<InputObservation<T, P>> for Observation<T, P> {
+    fn from(obs: InputObservation<T, P>) -> Self {
+        match obs {
+            InputObservation::Add {
+                peer_id,
+                related_info,
+            } => Observation::Add {
+                peer_id,
+                related_info,
+            },
+            InputObservation::Remove {
+                peer_id,
+                related_info,
+            } => Observation::Remove {
+                peer_id,
+                related_info,
+            },
+            InputObservation::OpaquePayload(payload) => Observation::OpaquePayload(payload),
+        }
+    }
+}
+
+#[serde(bound = "")]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+pub enum ObservationRef<'a, T: NetworkEvent, P: PublicId> {
+    Genesis {
+        group: &'a BTreeSet<P>,
+        related_info: &'a Vec<u8>,
+    },
+    Add {
+        peer_id: &'a P,
+        related_info: &'a Vec<u8>,
+    },
+    Remove {
+        peer_id: &'a P,
+        related_info: &'a Vec<u8>,
+    },
+    Accusation {
+        offender: &'a P,
+        malice: &'a Malice<T, P>,
+    },
+    OpaquePayload(&'a T),
+    DkgResult(&'a DkgResult),
+    DkgMessage(&'a DkgMessage),
 }
 
 /// Type of malicious behaviour.
