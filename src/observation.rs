@@ -46,13 +46,14 @@ pub enum InputObservation<T: NetworkEvent, P: PublicId> {
 }
 
 impl<T: NetworkEvent, P: PublicId> InputObservation<T, P> {
+    /// Serialize to create or verify a signature.
+    pub fn serialise_for_signature(&self) -> Vec<u8> {
+        self.as_ref().serialise_for_signature()
+    }
+
     /// Is this observation's payload opaque to PARSEC?
     pub fn is_opaque(&self) -> bool {
-        if let InputObservation::OpaquePayload(_) = *self {
-            true
-        } else {
-            false
-        }
+        self.as_ref().is_opaque()
     }
 
     /// Get an ObservationRef
@@ -83,7 +84,7 @@ impl<T: NetworkEvent, P: PublicId> Debug for InputObservation<T, P> {
     }
 }
 
-/// An enum of the various parsec events for which a peer can vote.
+/// An enum of the various events Parsec can vote for.
 #[serde(bound = "")]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum ParsecObservation<T: NetworkEvent, P: PublicId> {
@@ -106,6 +107,11 @@ pub enum ParsecObservation<T: NetworkEvent, P: PublicId> {
 }
 
 impl<T: NetworkEvent, P: PublicId> ParsecObservation<T, P> {
+    /// Serialize to create or verify a signature.
+    pub fn serialise_for_signature(&self) -> Vec<u8> {
+        self.as_ref().serialise_for_signature()
+    }
+
     /// Get an ObservationRef
     pub(crate) fn as_ref(&self) -> ObservationRef<T, P> {
         match self {
@@ -129,65 +135,37 @@ impl<T: NetworkEvent, P: PublicId> Debug for ParsecObservation<T, P> {
     }
 }
 
-/// An enum of the various events peers can vote for.
-/// For internal use only
+/// For internal use: An enum of the various events peers can vote for.
 #[serde(bound = "")]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub(crate) enum Observation<T: NetworkEvent, P: PublicId> {
-    /// Genesis group
     Genesis {
-        /// Members of the genesis group.
         group: BTreeSet<P>,
-        /// Extra arbitrary information for use by the client.
-        /// Note: this can be set through the `genesis_related_info` argument of
-        /// `Parsec::from_genesis`.
         related_info: Vec<u8>,
     },
-    /// Vote to add the indicated peer to the network.
     Add {
-        /// Public id of the peer to be added
         peer_id: P,
-        /// Extra arbitrary information for use by the client
         related_info: Vec<u8>,
     },
-    /// Vote to remove the indicated peer from the network.
     Remove {
-        /// Public id of the peer to be removed
         peer_id: P,
-        /// Extra arbitrary information for use by the client
         related_info: Vec<u8>,
     },
-    /// Vote to accuse a peer of malicious behaviour.
     Accusation {
-        /// Public id of the peer committing the malice.
         offender: P,
-        /// Type of the malice committed.
         malice: Malice<T, P>,
     },
-    /// Vote for an event which is opaque to Parsec.
     OpaquePayload(T),
-    /// Internal only: Do not vote for it or expect it to come in blocks.
+    /// Internal only: No blocks with it.
     /// Vote for the next message (Part or Ack) to be handled for the Distributed Key Generation
     /// algorithm used by our common coin.
     DkgMessage(DkgMessage),
 }
 
 impl<T: NetworkEvent, P: PublicId> Observation<T, P> {
-    /// Is this observation's payload opaque to PARSEC?
-    pub fn is_opaque(&self) -> bool {
-        if let Observation::OpaquePayload(_) = *self {
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Is this observation's an internal `DkgMessage`
-    pub fn is_dkg_message(&self) -> bool {
-        match *self {
-            Observation::DkgMessage(_) => true,
-            _ => false,
-        }
+    /// Serialize to create or verify a signature.
+    pub fn serialise_for_signature(&self) -> Vec<u8> {
+        self.as_ref().serialise_for_signature()
     }
 
     /// Get an ObservationRef
@@ -251,6 +229,8 @@ impl<T: NetworkEvent, P: PublicId> From<InputObservation<T, P>> for Observation<
     }
 }
 
+/// A common reference that can be shared by all the types standing in for Observation.
+/// Provide a common `serialise_for_signature`, and also cheap comparaisons.
 #[serde(bound = "")]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub(crate) enum ObservationRef<'a, T: NetworkEvent, P: PublicId> {
@@ -276,7 +256,7 @@ pub(crate) enum ObservationRef<'a, T: NetworkEvent, P: PublicId> {
 }
 
 impl<'a, T: NetworkEvent, P: PublicId> ObservationRef<'a, T, P> {
-    /// Docs
+    /// Serialize to create or verify a signature.
     pub fn serialise_for_signature(&self) -> Vec<u8> {
         serialise(self)
     }
@@ -290,7 +270,7 @@ impl<'a, T: NetworkEvent, P: PublicId> ObservationRef<'a, T, P> {
         }
     }
 
-    /// Is this observation's an internal `DkgMessage`
+    /// Is this observation an internal `DkgMessage`
     pub fn is_dkg_message(&self) -> bool {
         match *self {
             ObservationRef::DkgMessage(_) => true,

@@ -16,14 +16,15 @@ use threshold_crypto::{PublicKeySet, SecretKeyShare};
 #[derive(Clone)]
 /// DKG result
 pub struct DkgResult {
-    /// Aggregate public key
+    /// Public key set to verify threshold signatures
     pub public_key_set: PublicKeySet,
-    /// Secrect Key share
+    /// Secret Key share: None if the node was not participating in the DKG and did not receive
+    /// encrypted shares.
     pub secret_key_share: Option<SecretKeyShare>,
 }
 
 impl DkgResult {
-    /// New DkgResult
+    /// Create DkgResult from components
     pub fn new(public_key_set: PublicKeySet, secret_key_share: Option<SecretKeyShare>) -> Self {
         Self {
             public_key_set,
@@ -31,7 +32,7 @@ impl DkgResult {
         }
     }
 
-    fn comparaison_value(&self) -> (&PublicKeySet, bool) {
+    fn comparison_value(&self) -> (&PublicKeySet, bool) {
         (&self.public_key_set, self.secret_key_share.is_some())
     }
 }
@@ -49,7 +50,7 @@ impl Debug for DkgResult {
 
 impl PartialEq for DkgResult {
     fn eq(&self, rhs: &Self) -> bool {
-        self.comparaison_value().eq(&rhs.comparaison_value())
+        self.comparison_value().eq(&rhs.comparison_value())
     }
 }
 
@@ -57,14 +58,13 @@ impl Eq for DkgResult {}
 
 impl PartialOrd for DkgResult {
     fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
-        self.comparaison_value()
-            .partial_cmp(&rhs.comparaison_value())
+        self.comparison_value().partial_cmp(&rhs.comparison_value())
     }
 }
 
 impl Ord for DkgResult {
     fn cmp(&self, rhs: &Self) -> Ordering {
-        self.comparaison_value().cmp(&rhs.comparaison_value())
+        self.comparison_value().cmp(&rhs.comparison_value())
     }
 }
 

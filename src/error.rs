@@ -71,7 +71,7 @@ impl Display for Error {
                 "The payload hash doesn't correspond to any payload known to our node."
             ),
             Error::MissingVotes => write!(f, "Block cannot be created with no votes"),
-            Error::InternalPayload => write!(f, "Block cannot be created internal payload"),
+            Error::InternalPayload => write!(f, "Block cannot be created with internal payload"),
             Error::SignatureFailure => write!(
                 f,
                 "The message or signature might be corrupted, or the signer is wrong."

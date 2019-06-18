@@ -10,6 +10,7 @@ use super::{Ack, Part};
 use crate::parsec::KeyGenId;
 use std::fmt;
 
+/// Messages used for running BLS DKG.
 #[serde(bound = "")]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum DkgMessage {

@@ -94,7 +94,7 @@ pub(crate) type KeyGenId = usize;
 pub struct Parsec<T: NetworkEvent, S: SecretId> {
     // The PeerInfo of other nodes.
     peer_list: PeerList<S>,
-    // A distributed key generation.
+    // Set of active distributed key generation, with a KeyGenId used by `DkgMessage`.
     key_gen: BTreeMap<KeyGenId, KeyGen<S>>,
     // Next KeyGenId
     key_gen_next_id: KeyGenId,

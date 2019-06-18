@@ -20,7 +20,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-/// A struct representing a collection of votes by peers for an `Observation`.
+/// A struct representing a collection of votes by peers for an `BlockPayload`.
 #[serde(bound = "")]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Debug)]
 pub struct Block<T: NetworkEvent, P: PublicId> {
@@ -30,7 +30,7 @@ pub struct Block<T: NetworkEvent, P: PublicId> {
 
 impl<T: NetworkEvent, P: PublicId> Block<T, P> {
     /// Create a `Block` with no signatures for a single DkgResult
-    pub fn new_dkg_block(result: DkgResult) -> Self {
+    pub(crate) fn new_dkg_block(result: DkgResult) -> Self {
         Self {
             payload: BlockPayload::DkgResult(result),
             proofs: BTreeSet::new(),
@@ -90,16 +90,17 @@ pub enum BlockPayload<T: NetworkEvent, P: PublicId> {
 }
 
 impl<T: NetworkEvent, P: PublicId> BlockPayload<T, P> {
-    /// Is this observation's payload opaque to PARSEC?
-    pub fn is_opaque(&self) -> bool {
-        if let BlockPayload::InputObservation(InputObservation::OpaquePayload(_)) = *self {
-            true
-        } else {
-            false
-        }
+    /// Serialize to create or verify a signature.
+    pub fn serialise_for_signature(&self) -> Vec<u8> {
+        self.as_observation_ref().serialise_for_signature()
     }
 
-    /// Is this observation's an result only `DkgResult`
+    /// Is this payload opaque to PARSEC?
+    pub fn is_opaque(&self) -> bool {
+        self.as_observation_ref().is_opaque()
+    }
+
+    /// Is this payload a result only with no signature `DkgResult`
     pub fn is_dkg_result(&self) -> bool {
         match *self {
             BlockPayload::DkgResult(_) => true,
